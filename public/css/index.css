@@ -8,3 +8,7 @@ canvas {
     left: 0;
     top: 0;
 }
+
+html {
+    background-color: black;
+}
