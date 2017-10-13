@@ -25,8 +25,8 @@ class Chunk {
 class World {
     //chunks[w][h]
     static initChunks (w, h) {
-        var chunks = [];
-        var units = Chunk.units;
+        let chunks = [];
+        let units = Chunk.units;
         for (let i = 0; i < w; i = i + units) {
             let col = [];
             for (let j = 0; j < h; j = j + units) {
