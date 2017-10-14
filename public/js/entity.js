@@ -53,4 +53,21 @@ class Entity {
         this.x = pos[0];
         this.y = pos[1];
     }
+
+    getGraphic () {
+        //TODO
+    }
+}
+
+class Player extends Entity {
+
+    constructor (x, y, mass) {
+        super(x, y, mass);
+        this.id = id;
+    }
+
+    getGraphic () {
+        //TODO
+    }
+
 }

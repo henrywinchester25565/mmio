@@ -65,12 +65,13 @@ class World {
             this.getChunk(child.x, child.y).removeChild(child);
         }
     }
-}
 
-const world = new World(12, 6);
-let obj = {x: 23, y: 35, test: function () {console.log("my name is jeff")}};
-world.addChild(obj);
-let content = world.getChunk(obj.x, obj.y).children;
-for (let i = 0; i < content.length; i++) {
-    content[i].test();
+    update () {
+        //TODO
+    }
+
+    //Based on server data
+    updateChunks (chunks) {
+        //TODO
+    }
 }

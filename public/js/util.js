@@ -67,3 +67,14 @@ class Vector {
         else return null; //TODO
     }
 }
+
+//search array elements for id
+const SEARCH = function (id, array) {
+    if (array.isArray()) {
+        if (typeof id === 'number' && array[id].id === id) {return array[id];}
+        for (let i = 0; i < array.length; i++) {
+            if (array[i].id === id) {return array[i];}
+        }
+    }
+    return null;
+}

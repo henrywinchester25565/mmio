@@ -1,18 +1,23 @@
-var w;
-var h;
-const canvas = $('#canvas');
+//For overall handling
+"use strict";
 
-drawCanvas = function () {
-    w = window.innerWidth;
-    h = window.innerHeight;
-    canvas.attr('width', w);
-    canvas.attr('height', h);
+const $CLIENTS = [];
+class Client {
+    constructor (nickname, ip) {
+        this.id = nickname;
+        this.ip = ip;
+    }
 }
 
-drawCanvas();
-console.log('Set initial canvas width to ' + w + ' and height to ' + h);
-
-$( window ).resize(drawCanvas);
-
+const canvas = 'canvas'; //Name of canvas
 const socket = io();
 
+const world = new World(12, 6);
+let obj = {x: 23, y: 35, test: function () {console.log("my name is jeff")}};
+world.addChild(obj);
+let content = world.getChunk(obj.x, obj.y).children;
+for (let i = 0; i < content.length; i++) {
+    content[i].test();
+}
+
+const camera = new Camera(world, canvas);
