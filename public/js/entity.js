@@ -4,6 +4,7 @@ class Light {
     //TODO
 }
 
+const $ENTITIES = [];
 class Entity {
 
     //Resistance forces
@@ -14,12 +15,16 @@ class Entity {
     constructor (x, y, mass) {
         this.x = x;
         this.y = y;
+        this.maxSpeed = 100;
         this.mass = typeof mass !== 'undefined' ? mass : 0; //mass of warrior = 1
         this.forces = [];
+        $ENTITIES.push(this);
+
+        this.u = -5; //coefficient of friction
     }
 
     setVelocity (value) {
-        if (value.isArray()) {this.velocity = value;}
+        if (Array.isArray(value)) {this.velocity = value;}
         else {
             this.velocity = [];
             for (let i = 0; i < this.velocity.length; i++) {
@@ -29,19 +34,56 @@ class Entity {
     }
     //dt is delta time
     getVelocity (dt) {
-        if (this.velocity === null) {this.velocity = [];}
+        if (typeof this.velocity === 'undefined') {this.setVelocity([0 ,0]);}
+        let speed = Entity.getSpeed(this.velocity);
         if (this.forces.length !== 0) {
             let result = this.forces[0];
+
             for (let i = 0; i < this.forces.length; i++) {
                 result = Vector.add(result, this.forces[i]); //Not imported
             }
+
+            let drag = Vector.multiply(-1 * (speed/this.maxSpeed), result); //drag for max speed
+            result = Vector.add(result, drag);
+
+            //TODO make this a util method
+            let direction = [];
+            if (this.velocity[0] === 0 && this.velocity[1] === 0) {direction = [0 ,0];}
+            else {
+                let angle = this.velocity[0] !== 0 ? Math.abs(Math.atan(this.velocity[1]/this.velocity[0])) : Math.PI;
+                direction[0] = this.velocity[0] >= 0 ? Math.cos(angle) : -1 * Math.cos(angle);
+                direction[1] = this.velocity[1] >= 0 ? Math.sin(angle) : -1 * Math.sin(angle);
+            }
+
+            let friction = Vector.multiply(this.mass * 10 * this.u, direction); //friction
+            //console.log(friction);
+            result = speed > 0.4 ? Vector.add(result, friction) : result;//TODO change getSpeed to getMag, also make this better
+            //result = Math.abs(result[0]) > 2 && Math.abs(result[1]) > 2 ? result : [0, 0];
+
+            if (result[0] === 0 && result[1] === 0 && speed < 0.6) {
+                this.setVelocity([0, 0]);
+                return this.velocity;
+            }
+
             if (this.mass !== 0) { //for acceleration
                 result = Vector.multiply(1/this.mass, result);
             }
+
             result = Vector.multiply(dt, result); //delta velocity
-            this.velocity = Vector.add(result, this.velocity);
+            let vel = Vector.add(result, this.velocity);
+
+            this.setVelocity(vel);
         }
         return this.velocity;
+    }
+
+    static getSpeed (array) {
+        let speed = 0;
+        for (let i = 0; i < array.length; i++) {
+            speed = speed + Math.pow(array[i], 2);
+        }
+        speed = Math.sqrt(speed);
+        return speed;
     }
 
     //dt is delta time
@@ -54,20 +96,67 @@ class Entity {
         this.y = pos[1];
     }
 
-    getGraphic () {
-        //TODO
+    update (dt) {
+        this.updatePos(dt);
+    }
+
+    getGraphic (u2p) {
+        let circle = new createjs.Shape();
+        circle.graphics.beginFill("Red").drawCircle(0, 0, 0.4 * u2p);
+        circle.layer = 1;
+        return circle;
+    }
+
+    //Kill entity from global access
+    kill () {
+        let index = $ENTITIES.indexOf(this);
+        if (index > -1) {
+            $ENTITIES.splice(index, 1);
+        }
     }
 }
 
+const $PLAYERS = [];
 class Player extends Entity {
 
     constructor (x, y, mass) {
         super(x, y, mass);
-        this.id = id;
+        this.maxSpeed = 40;
+        $PLAYERS.push(this);
     }
 
-    getGraphic () {
-        //TODO
+    getGraphic (u2p) {
+        let circle = new createjs.Shape();
+        circle.graphics.beginFill("DeepSkyBlue").drawCircle(0, 0, 0.8 * u2p);
+        circle.layer = 2;
+        return circle;
+    }
+
+    //Kill player from global access
+    kill () {
+        let index = $ENTITIES.indexOf(this);
+        if (index > -1) {
+            $ENTITIES.splice(index, 1);
+        }
+        index = $PLAYERS.indexOf(this);
+        if (index > -1) {
+            $PLAYERS.splice(index, 1);
+        }
+    }
+}
+
+class Floor extends Entity {
+
+    constructor (x, y, mass) {
+        super(x, y, mass);
+    }
+
+    getGraphic (u2p) {
+        let texture = new Image(100, 100);
+        texture.src = 'img/devTexture.jpg';
+        let img = new createjs.Bitmap(texture);
+        img.scaleX = img.scaleY = (24 * u2p) / 240;
+        return img;
     }
 
 }

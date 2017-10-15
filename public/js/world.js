@@ -2,7 +2,7 @@
 
 class Chunk {
     //length of sides in units (u)
-    static get units () {return 12;}
+    static get units () {return 24;}
 
     //chunk x and y => x, y
     constructor (x, y) {
@@ -32,6 +32,7 @@ class World {
             for (let j = 0; j < h; j = j + units) {
                 let chunk = new Chunk(i, j);
                 col.push(chunk);
+                //console.log(chunk);
             }
             chunks.push(col);
         }
@@ -40,10 +41,10 @@ class World {
 
     //width and height (in chunks) => w, h
     constructor (w, h) {
-        this.width = w * Chunk.units;
-        this.height = h * Chunk.units;
+        this.w = w * Chunk.units;
+        this.h = h * Chunk.units;
         this.children = [];
-        this.chunks = World.initChunks(this.width, this.height);
+        this.chunks = World.initChunks(this.w, this.h);
     }
 
     //Coords for anywhere in the world
@@ -52,6 +53,10 @@ class World {
         let chunkX = (x - x%units)/units;
         let chunkY = (y - y%units)/units;
         return this.chunks[chunkX][chunkY];
+    }
+    inBounds (x, y) {
+        if ((x < 0 || x >= this.w) || (y < 0 || y >= this.h)) {return false;}
+        return true;
     }
 
     addChild (child) {
@@ -66,8 +71,51 @@ class World {
         }
     }
 
-    update () {
-        //TODO
+    update (dt) {
+        dt = dt/1000; //ms to s for calculations
+        //update chunks with players in, and around
+        let chunks = [];
+        //Chunks should only appear in chunks[] once
+        //TODO refine this
+        for (let i = 0; i < $PLAYERS.length; i++) {
+            if (this.inBounds($PLAYERS[i].x, $PLAYERS[i].y)) {
+                let plyChunk = this.getChunk($PLAYERS[i].x, $PLAYERS[i].y);
+                if (chunks.indexOf(plyChunk) === -1) {
+                    chunks.push(plyChunk);
+                    let ox = plyChunk.x - Chunk.units;
+                    let oy = plyChunk.y - Chunk.units;
+                    //3*3 pattern should be enough... hopefully.
+                    for (let j = 0; j < 3 * Chunk.units; j = j + Chunk.units) {
+                        for (let k = 0; k < 3 * Chunk.units; k = k + Chunk.units) {
+                            if (this.inBounds(ox + j, oy + k)) {
+                                let chunk = this.getChunk(ox + j, oy + k);
+                                if (chunks.indexOf(chunk) === -1 && typeof chunk !== 'undefined') {
+                                    chunks.push(chunk);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //update all the children
+        for (let i = 0; i < chunks.length; i++) {
+            for (let j = 0; j < chunks[i].children.length; j++) {
+                //console.log(chunks[i].children[j]);
+                //Swaps child's chunk after updates
+                let child = chunks[i].children[j];
+                child.update(dt);
+                if (this.inBounds(child.x, child.y)) {
+                    let chunk = this.getChunk(child.x, child.y);
+                    if (chunk !== chunks[i]) {
+                        chunks[i].removeChild(child);
+                        chunk.addChild(child);
+                    }
+                }
+            }
+
+        }
     }
 
     //Based on server data

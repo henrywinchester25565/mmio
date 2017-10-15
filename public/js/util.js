@@ -55,9 +55,9 @@ class Vector {
 
     //Num and vector
     static multiply (a, b) {
-        if (!(a.isArray() && b.isArray())) {
-            let num = a.isArray() ? b : a;
-            let vector = a.isArray() ? a : b;
+        if (!(Array.isArray(a) && Array.isArray(b))) {
+            let num = Array.isArray(a) ? b : a;
+            let vector = Array.isArray(a) ? a : b;
             let result = [];
             for (let i = 0; i < vector.length; i++) {
                 result[i] = num * vector[i];
