@@ -103,7 +103,7 @@ class Entity {
     getGraphic (u2p) {
         let circle = new createjs.Shape();
         circle.graphics.beginFill("Red").drawCircle(0, 0, 0.4 * u2p);
-        circle.layer = 1;
+        circle.layerWeight = 1;
         return circle;
     }
 
@@ -121,15 +121,22 @@ class Player extends Entity {
 
     constructor (x, y, mass) {
         super(x, y, mass);
-        this.maxSpeed = 40;
+        this.maxSpeed = 70;
+        this.u = -10;
         $PLAYERS.push(this);
     }
 
     getGraphic (u2p) {
-        let circle = new createjs.Shape();
-        circle.graphics.beginFill("DeepSkyBlue").drawCircle(0, 0, 0.8 * u2p);
-        circle.layer = 2;
-        return circle;
+        let graphic = new createjs.Container();
+        let back = new createjs.Shape();
+        back.compositeOperation = 'screen';
+        back.graphics.rf(['White', 'DeepSkyBlue', '#000'], [0, 0.1, 1], 0, 0, 0.8 * u2p, 0, 0, 1.5*u2p).dc(0, 0, 1.5*u2p);
+        back.alpha = 0.5;
+        let front = new createjs.Shape();
+        front.graphics.f('White').dc(0, 0, 0.8 * u2p);
+        graphic.addChild(back, front);
+        graphic.layerWeight = 1;
+        return graphic;
     }
 
     //Kill player from global access
@@ -156,6 +163,9 @@ class Floor extends Entity {
         texture.src = 'img/devTexture.jpg';
         let img = new createjs.Bitmap(texture);
         img.scaleX = img.scaleY = (24 * u2p) / 240;
+        //let img = new createjs.Shape();
+        //img.graphics.f('Black').dr(0, 0, 24 * u2p, 24 * u2p);
+        img.layerWeight = 0;
         return img;
     }
 

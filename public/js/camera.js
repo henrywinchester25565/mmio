@@ -1,11 +1,13 @@
 //Used to map world to canvas
 "use strict";
 
+const FR = 60;
+
 class Camera {
 
     //Static constant for # units min side equals
     get units () {
-        return 40;
+        return 48;
     }
 
     constructor(world, canvas) {
@@ -21,7 +23,7 @@ class Camera {
         window.onresize = function (event) {self.drawCanvas(self);}//TODO remove self
 
 
-        createjs.Ticker.framerate = 60; //FPS
+        createjs.Ticker.framerate = FR; //FPS
 
         function onTick (event) {
             if (!event.paused) {
@@ -94,27 +96,28 @@ class Camera {
                     //Gives graphic its canvas relative x and y
                     graphic.x = (chunk.children[j].x - ox) * this.u2p;
                     graphic.y = (chunk.children[j].y - oy) * this.u2p;
-                    this.stage.addChild(graphic); //Might give graphics an id so I can update them without deleting and removing them
+                    //this.stage.addChild(graphic); //Might give graphics an id so I can update them without deleting and removing them
                     //TODO the idea is right, but the implementation doesn't work
-                    /*if (typeof graphic.layer === 'undefined') {graphic.layer = 0;}
-                    if (graphics.length > 0) {
-                        let inserted = false;
-                        //linear weight insertion
-                        for (let k = 0; k < graphics.length; k++) {
-                            if (graphics[k].layer > graphic.layer) {
-                                graphics = graphics.splice(k, 0, graphic);
-                                //console.log(graphics[k].layer + " : " + graphic.layer);
-                                inserted = true;
-                            }
-                        }
-                        if (!inserted) {graphics.push(graphic);}
-                    }
-                    else {graphics.push(graphic);}*/
+                    if (typeof graphic.layerWeight === 'undefined') {graphic.layerWeight = 0;}
+                    graphics.push(graphic);
                 }
             }
         }
-        for (let i = 0; i < graphics.length; i++) {
-            this.stage.addChild(graphics[i]);
+
+        //Render based on layer weight
+        let layerWeight = 0;
+        while (graphics.length > 0) {
+            let g = [];
+            for (let i = 0; i < graphics.length; i++) {
+                if (graphics[i].layerWeight === layerWeight) {
+                    this.stage.addChild(graphics[i]);
+                }
+                else {
+                    g.push(graphics[i]);
+                }
+            }
+            graphics = g;
+            layerWeight++;
         }
     }
 }

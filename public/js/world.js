@@ -45,6 +45,7 @@ class World {
         this.h = h * Chunk.units;
         this.children = [];
         this.chunks = World.initChunks(this.w, this.h);
+        this.dtx = 1; //time multi
     }
 
     //Coords for anywhere in the world
@@ -73,6 +74,8 @@ class World {
 
     update (dt) {
         dt = dt/1000; //ms to s for calculations
+        dt = dt * this.dtx; //x multi (for slo mo)
+        this.dtx = 1;
         //update chunks with players in, and around
         let chunks = [];
         //Chunks should only appear in chunks[] once

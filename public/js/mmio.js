@@ -2,10 +2,11 @@
 "use strict";
 
 const KEYS = {
-    w: 87,
-    a: 65,
-    s: 83,
-    d: 68
+    w: 'w',
+    a: 'a',
+    s: 's',
+    d: 'd',
+    space: ' '
 }
 
 //TODO this whole thing needs a lot of work
@@ -38,18 +39,30 @@ self.keyforce =*/
         }
         createjs.Ticker.addEventListener('tick', ukf);
 
-        $(window).keydown(function (event) {
+        /*$(window).keydown(function (event) {
             if (self.keysdown.indexOf(event.which) === -1) {
                 self.keysdown.push(event.which);
             }
-        });
-        $(window).keyup(function (event) {
+        });*/
+        document.addEventListener('keydown', function(event) {
+            if (self.keysdown.indexOf(event.key) === -1) {
+                self.keysdown.push(event.key);
+                console.log(self.keysdown);
+            }
+        }, false);
+        /*$(window).keyup(function (event) {
             let index = self.keysdown.indexOf(event.which);
             if (index !== -1) {
-                self.keysdown = self.keysdown.splice(index + 1, 1); //+1 makes no sense, but that's just how it's working
-                //TODO look into why it's +1, could cause issues down the line
+                self.keysdown = self.keysdown.splice(index + 1, 1);
             }
-        });
+        });*/
+        document.addEventListener('keyup', function(event) {
+            let index = self.keysdown.indexOf(event.key);
+            if (index !== -1) {
+                self.keysdown.splice(index, 1);
+            }
+            console.log(self.keysdown);
+        }, false);
     }
 
     updateKeyforce () {
@@ -68,6 +81,9 @@ self.keyforce =*/
             else if (self.keysdown[i] === KEYS.d) {
                 directions.push([1, 0]);
             }
+            else if (self.keysdown[i] === KEYS.space) {
+                world.dtx = 0.5;
+            }
         }
         let direction = [0, 0];
         for (let i = 0; i < directions.length; i++) {
@@ -77,7 +93,7 @@ self.keyforce =*/
         if (Math.abs(direction[0]) + Math.abs(direction[1]) === 2) {
             direction = Vector.multiply(1/Math.sqrt(2), direction);
         }
-        let force = Vector.multiply(80, direction);
+        let force = Vector.multiply(200, direction);
 
         let index = self.player.forces.indexOf(self.keyforce);
         if (index !== -1) {
