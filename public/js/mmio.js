@@ -41,16 +41,13 @@ self.keyforce =*/
         $(window).keydown(function (event) {
             if (self.keysdown.indexOf(event.which) === -1) {
                 self.keysdown.push(event.which);
-                console.log("d" + event.which);
-                console.log(self.keysdown);
             }
         });
         $(window).keyup(function (event) {
             let index = self.keysdown.indexOf(event.which);
             if (index !== -1) {
-                self.keysdown = self.keysdown.splice(index, 0);
-                console.log("u" + event.which);
-                console.log(self.keysdown);
+                self.keysdown = self.keysdown.splice(index + 1, 1); //+1 makes no sense, but that's just how it's working
+                //TODO look into why it's +1, could cause issues down the line
             }
         });
     }
@@ -80,18 +77,11 @@ self.keyforce =*/
         if (Math.abs(direction[0]) + Math.abs(direction[1]) === 2) {
             direction = Vector.multiply(1/Math.sqrt(2), direction);
         }
-        let force = Vector.multiply(40, direction);
-
-        //TODO find a better way of checking if keys are down
-        /*if (force[0] === 0 && force[1] ===0) {
-            self.player.u = -5;
-        } else {
-            self.player.u = 0;
-        }*/
+        let force = Vector.multiply(80, direction);
 
         let index = self.player.forces.indexOf(self.keyforce);
         if (index !== -1) {
-            self.player.forces = self.player.forces.splice(index, 1);
+            self.player.forces = self.player.forces.splice(index, 1); //No +1 here; weird
         }
         self.keyforce = force;
         self.player.forces.push(self.keyforce);
