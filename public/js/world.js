@@ -85,11 +85,11 @@ class World {
                 let plyChunk = this.getChunk($PLAYERS[i].x, $PLAYERS[i].y);
                 if (chunks.indexOf(plyChunk) === -1) {
                     chunks.push(plyChunk);
-                    let ox = plyChunk.x - Chunk.units;
-                    let oy = plyChunk.y - Chunk.units;
-                    //3*3 pattern should be enough... hopefully.
-                    for (let j = 0; j < 3 * Chunk.units; j = j + Chunk.units) {
-                        for (let k = 0; k < 3 * Chunk.units; k = k + Chunk.units) {
+                    let ox = plyChunk.x - Chunk.units*3;
+                    let oy = plyChunk.y - Chunk.units*3;
+                    //7*7 pattern should be enough... hopefully.
+                    for (let j = 0; j < 7 * Chunk.units; j = j + Chunk.units) {
+                        for (let k = 0; k < 7 * Chunk.units; k = k + Chunk.units) {
                             if (this.inBounds(ox + j, oy + k)) {
                                 let chunk = this.getChunk(ox + j, oy + k);
                                 if (chunks.indexOf(chunk) === -1 && typeof chunk !== 'undefined') {

@@ -15,56 +15,57 @@ class Matrix {
     }
 }
 
+//TODO use x and y instead of array
 class Vector {
 
     //Add two vectors
     static add (a, b) {
-        let max = a.length > b.length ? b.length : a.length;
-        let result = [];
-        for (let i = 0; i < max; i++) {
-            if (a[i] === null) {
-                result.push(b[i]);
-            }
-            else if (b[i] === null) {
-                result.push(a[i]);
-            }
-            else {
-                result.push(a[i] + b[i]);
-            }
-        }
-        return result;
+        let r = {x: a.x + b.x, y: a.y + b.y};
+        return r;
     }
 
     //Minus a vector from another vector
     static sub (a, b) {
-        let max = a.length > b.length ? a.length : b.length;
-        let result = [];
-        for (let i = 0; i < max; i++) {
-            if (a[i] === null) {
-                result.push(b[i]);
-            }
-            else if (b[i] === null) {
-                result.push(a[i]);
-            }
-            else {
-                result.push(a[i] + b[i]);
-            }
-        }
-        return result;
+        let r = {x: a.x - b.x, y: a.y - b.y};
+        return r;
     }
 
     //Num and vector
     static multiply (a, b) {
-        if (!(Array.isArray(a) && Array.isArray(b))) {
-            let num = Array.isArray(a) ? b : a;
-            let vector = Array.isArray(a) ? a : b;
-            let result = [];
-            for (let i = 0; i < vector.length; i++) {
-                result[i] = num * vector[i];
-            }
-            return result;
+        //2 nums
+        if (typeof a === 'number' && typeof b === 'number') {
+            return a * b;
         }
-        else return null; //TODO
+        //1 num, 1 vector
+        else if (typeof a === 'number' || typeof b === 'number') {
+            let num = typeof a === 'number' ? a : b;
+            let vector = typeof a !== 'number' ? a : b;
+            return {x: num * vector.x, y: num * vector.y};
+        }
+        else {
+            return {x: a.x * b.x, y: a.y * b.y};
+        }
+    }
+
+
+    //magnitude
+    static mag (a) {
+        let mag = a.x * a.x;
+        mag = mag + a.y * a.y;
+        mag = Math.sqrt(mag);
+        return mag;
+    }
+
+    //direction vector
+    static dir (a) {
+        let direction = {};
+        if (a.x === 0 && a.y === 0) {direction = [0 ,0];}
+        else {
+            let angle = a.x !== 0 ? Math.abs(Math.atan(a.y/a.x)) : Math.PI;
+            direction.x = a.x >= 0 ? Math.cos(angle) : -1 * Math.cos(angle);
+            direction.y = a.y >= 0 ? Math.sin(angle) : -1 * Math.sin(angle);
+        }
+        return direction;
     }
 }
 

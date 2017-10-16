@@ -1,6 +1,8 @@
 //For overall handling
 "use strict";
+const socket = io();
 
+//TODO this thing needs a lot of work
 const KEYS = {
     w: 'w',
     a: 'a',
@@ -9,106 +11,29 @@ const KEYS = {
     space: ' '
 }
 
-//TODO this whole thing needs a lot of work
 const $CLIENTS = [];
 class Client {
-    constructor (nickname, ip, world, isClient) {
-        this.id = nickname;
+    constructor (x, y, nickname, ip, isClient) {
+        this.nickname = nickname;
         this.ip = ip;
-        this.player = new Player(world.w/2, world.h/2, 1);
-        if (isClient === true) {
-            this.camera = new Camera(world, canvas);
-            this.camera.target = this.player;
-        }
-        this.keysdown = [];
-        world.addChild(this.player);
+        if (typeof this.isClient === 'undefined') {this.isClient = false;}
+        this.isClient = isClient;
     }
 
-    /*let index = self.player.forces.indexOf(self.keyforce);
-    if (index !== -1) {
-    self.player.forces = self.player.forces.splice(index, 1);
-}
-self.keyforce =*/
-
-
-    init () {
-        let self = this;
-
-        let ukf = function () {
-            self.updateKeyforce();
+    //for setting players
+    set player (player) {
+        this._player = player;
+        if (this.isClient) {
+            this.controller = new PlayerController(this._player);
+            this._player.controller = this.controller;
         }
-        createjs.Ticker.addEventListener('tick', ukf);
-
-        /*$(window).keydown(function (event) {
-            if (self.keysdown.indexOf(event.which) === -1) {
-                self.keysdown.push(event.which);
-            }
-        });*/
-        document.addEventListener('keydown', function(event) {
-            if (self.keysdown.indexOf(event.key) === -1) {
-                self.keysdown.push(event.key);
-                console.log(self.keysdown);
-            }
-        }, false);
-        /*$(window).keyup(function (event) {
-            let index = self.keysdown.indexOf(event.which);
-            if (index !== -1) {
-                self.keysdown = self.keysdown.splice(index + 1, 1);
-            }
-        });*/
-        document.addEventListener('keyup', function(event) {
-            let index = self.keysdown.indexOf(event.key);
-            if (index !== -1) {
-                self.keysdown.splice(index, 1);
-            }
-            console.log(self.keysdown);
-        }, false);
     }
-
-    updateKeyforce () {
-        let self = this; //TODO this is dumb
-        let directions = [];
-        for (let i = 0; i < self.keysdown.length; i++) {
-            if (self.keysdown[i] === KEYS.w) {
-                directions.push([0, -1]);
-            }
-            else if (self.keysdown[i] === KEYS.a) {
-                directions.push([-1, 0]);
-            }
-            else if (self.keysdown[i] === KEYS.s) {
-                directions.push([0, 1]);
-            }
-            else if (self.keysdown[i] === KEYS.d) {
-                directions.push([1, 0]);
-            }
-            else if (self.keysdown[i] === KEYS.space) {
-                world.dtx = 0.5;
-            }
-        }
-        let direction = [0, 0];
-        for (let i = 0; i < directions.length; i++) {
-            direction = Vector.add(direction, directions[i]);
-        }
-
-        if (Math.abs(direction[0]) + Math.abs(direction[1]) === 2) {
-            direction = Vector.multiply(1/Math.sqrt(2), direction);
-        }
-        let force = Vector.multiply(200, direction);
-
-        let index = self.player.forces.indexOf(self.keyforce);
-        if (index !== -1) {
-            self.player.forces = self.player.forces.splice(index, 1); //No +1 here; weird
-        }
-        self.keyforce = force;
-        self.player.forces.push(self.keyforce);
+    get player () {
+        return this._player;
     }
 }
-
-const canvas = 'canvas'; //Name of canvas
-const socket = io();
 
 const world = new World(12, 6);
-
 //SETUP WORLD TILES
 for (let i = 0; i < world.chunks.length; i++) {
     for (let j = 0; j < world.chunks[i].length; j++) {
@@ -117,8 +42,33 @@ for (let i = 0; i < world.chunks.length; i++) {
     }
 }
 
-let ent = new Entity(12, 30, 1.5);
+const client = new Client(10, 10, 'client', '::1', true);
+client.player = new Player (10, 10, {mass: 1, maxSpeed: 100, u: -10});
+world.addChild(client.player);
+
+const ent = new PhysObj(10, 20, {mass: 1, maxSpeed: 100, u: 0});
+ent.controller = new Controller(ent); //feels really weird doing it like this //todo make this better
+ent.graphic = function (u2p) {
+    let graphic = new createjs.Container();
+    let back = new createjs.Shape();
+    back.compositeOperation = 'screen';
+    back.graphics.rf(['black', 'crimson', '#000'], [0, 0.1, 1], 0, 0, 0.8 * u2p, 0, 0, 1.5*u2p).dc(0, 0, 1.5*u2p);
+    back.alpha = 0.5;
+    let front = new createjs.Shape();
+    front.graphics.f('black').dc(0, 0, 0.8 * u2p);
+    graphic.addChild(back, front);
+    graphic.layerWeight = 1;
+    return graphic;
+}
+ent.velocity = {x: 20, y: 0};
+ent.forces.push({x: 10, y: 0});
+ent.controller.update = function () {
+    if (this.physObj.x > Chunk.units * 3) {
+        this.physObj.forces = [{x: -20, y: 0}];
+    }
+}
 world.addChild(ent);
 
-const client = new Client('client', '::1', world, true);
-client.init();
+const canvas = 'canvas'; //Name of canvas
+const cam = new Camera(world, canvas);
+cam.target = client.player;

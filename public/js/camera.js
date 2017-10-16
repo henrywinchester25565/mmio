@@ -1,8 +1,8 @@
 //Used to map world to canvas
 "use strict";
-
 const FR = 60;
 
+//TODO add a slight follow delay
 class Camera {
 
     //Static constant for # units min side equals
@@ -77,15 +77,6 @@ class Camera {
                 }
             }
         }
-
-        /*let chunks = [];
-        for (let i = 0; i < this.world.chunks.length; i++) {
-            for (let j = 0; j < this.world.chunks[i].length; j++) {
-                chunks.push(this.world.chunks[i][j]);
-            }
-        }*/
-
-        //console.log(chunks);
 
         let graphics = [];
         for (let i = 0; i < chunks.length; i++) {
