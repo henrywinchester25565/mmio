@@ -127,4 +127,11 @@ class World {
         }
         return chunks;
     }
+
+    //Update chunks from server
+    updateChunks (chunks) {
+        for (let i = 0; i < chunks.length; i++) {
+            this.chunks[chunks[i].x][chunks[i].y] = chunks[i];
+        }
+    }
 }

@@ -12,6 +12,10 @@ socket.on('message', function(msg) {
     console.log(msg);
 });
 
+const client = {
+    init: false,
+};
+
 //JUST FOR TESTING WILL REDO
 $(function () {
     $('#nickname').submit(function () {
@@ -24,9 +28,28 @@ $(function () {
         }
         else {
             $('#nickname').css('display', 'none');
-            $('#canvas').css('display', 'auto');
+            $('#canvas').css('display', 'block');
             console.log("Successfully joined.");
         }
     });
+    socket.on('init', function (w, h, children, ply) {
+        if (!client.init) {
+            console.log("Downloading world...");
+            client.world = new World(w, h);
+            client.world.children = children;
 
+            console.log(children);
+
+            client.player = ply;
+            console.log("Creating camera...");
+            client.camera = new Camera(client.world, 'canvas');
+            client.camera.target = client.player;
+        }
+    });
+    socket.on('update', function (chunks, ply) {
+        if (client.init) {
+            client.world.updateChunks(chunks);
+            client.player = ply;
+        }
+    });
 });
