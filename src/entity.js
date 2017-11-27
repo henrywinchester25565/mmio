@@ -1,18 +1,56 @@
+//DESC: ENTITIES ARE OBJECTS REPRESENTED IN THE X, Y COORDINATE SPACE
 "use strict";
-//Requirements
-const $VECTOR = require('./general').$VECTOR;
 
-//Should always be shorted because of id selection and kill requirement
-const $ENTITIES = [];
+//LOADED
+console.log("Loaded: entity.js");
 
-//An Entity has a physical representation in the World
+//REQUIREMENTS
+const $VECTOR = require('./general').vector;
+
+//BASE CLASS
 class Entity {
 
     constructor (x, y) {
         this.x = x;
         this.y = y;
+        this.type = 'entity'; //Type of entity
+    }
 
-        //Look for empty id
+}
+
+//ALL ENTITIES
+const $ENTS = {
+    entity: Entity
+};
+
+//CHECK IF ENTITY
+const $IS_ENTITY = function (entity) {
+    return $ENTS[entity.type] !== undefined;
+};
+
+//ALL ENTITIES
+const $CONTROLLERS = {};
+
+//CHECK IF CONTROLLER
+const $IS_CONTROLLER = function (controller) {
+    return $CONTROLLERS[controller.type] !== undefined;
+};
+
+//EXPORTS
+exports.ents = $ENTITIES;
+exports.isEnt = $IS_ENTITY;
+exports.controllers = $CONTROLLERS;
+exports.isController = $IS_CONTROLLER;
+
+//NOTES
+//Commented out because it's useful, but needs to be rewritten into above
+/*class Entity {
+
+    constructor (x, y) {
+        this.x = x;
+        this.y = y;
+
+        //Look for empty id //TODO <- Just so I can see this. Had ID's so they could be updated client-side, wondering if better solution
         //Linear search
         let found = false;
         let index = 0;
@@ -168,9 +206,4 @@ class PhysicsController {
 
 const $CONTROLLERS = {
     phy: PhysicsController
-};
-
-//EXPORTS
-//exports.$ENTITIES = $ENTITIES;
-exports.$ENTITY = Entity;
-exports.$CONTROLLERS = $CONTROLLERS;
+};*/

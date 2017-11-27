@@ -1,8 +1,14 @@
+//DESC: GENERAL FUNCTIONALITY
 "use strict";
+
+//LOADED
+console.log("Loaded: general.js");
+
+//VECTORS
 //For vector operations with x and y components
 const $VECTOR_IS = function (a) {
     return typeof a.x !== 'undefined' && typeof a.y !== 'undefined';
-}
+};
 
 //Add components
 const $VECTOR_ADD = function (a, b) {
@@ -12,7 +18,7 @@ const $VECTOR_ADD = function (a, b) {
         return a;
     }
     else {return null}
-}
+};
 
 //By scalar
 const $VECTOR_MULTIPLY = function (a, b) {
@@ -24,7 +30,7 @@ const $VECTOR_MULTIPLY = function (a, b) {
     vector.x = vector.x * scalar;
     vector.y = vector.y * scalar;
     return vector;
-}
+};
 
 //Dot product, for angle between vectors
 const $VECTOR_DOT = function (a, b) {
@@ -32,7 +38,7 @@ const $VECTOR_DOT = function (a, b) {
         return a.x * b.x + a.y * b.y ; //Dot product
     }
     else {return null}
-}
+};
 
 //With x, y to origin
 const $VECTOR_MAGNITUDE = function (a) {
@@ -40,7 +46,7 @@ const $VECTOR_MAGNITUDE = function (a) {
         return Math.sqrt(a.x * a.x + a.y * a.y); //Pythagoras
     }
     else {return null}
-}
+};
 
 // -- Test in degrees, work in radians --
 //Angle between two vectors
@@ -50,7 +56,7 @@ const $VECTOR_ANGLE_LOCAL = function (a, b) {
         return Math.acos(cosine);
     }
     else {return null}
-}
+};
 
 //Between vector and y axis, with vector direction considered
 const $VECTOR_ANGLE_GLOBAL = function (a) {
@@ -61,8 +67,9 @@ const $VECTOR_ANGLE_GLOBAL = function (a) {
         return angle;
     }
     else {return null}
-}
+};
 
+//ALL VECTOR OPERATIONS
 const $VECTOR = {
     add: $VECTOR_ADD,
     pro: $VECTOR_MULTIPLY,
@@ -70,7 +77,24 @@ const $VECTOR = {
     mag: $VECTOR_MAGNITUDE,
     anl: $VECTOR_ANGLE_LOCAL,
     ang: $VECTOR_ANGLE_GLOBAL
-}
+};
+
+//ARRAY OPERATIONS
+//Removes an element from an array
+const $ARRAY_REMOVE = function (array, obj) {
+    let index = array.indexOf(obj);
+    if (index > -1) {
+        array.splice(index, 1);
+        return true;
+    }
+    return false;
+};
+
+//ALL ARRAY OPERATIONS
+const $ARRAY = {
+    rmv: $ARRAY_REMOVE
+};
 
 //EXPORTS
-exports.$VECTOR = $VECTOR;
+exports.vector = $VECTOR;
+exports.array = $ARRAY;

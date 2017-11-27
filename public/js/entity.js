@@ -168,7 +168,7 @@ class PhysicsController {
 
 const $CONTROLLERS = {
     phy: PhysicsController
-}
+};
 
 //EXPORTS
 //exports.$ENTITIES = $ENTITIES;
