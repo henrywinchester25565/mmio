@@ -21,7 +21,7 @@ const _addEventListener = function (target, event, callback) {
     else {
         target.events[event] = [callback];
     }
-}
+};
 
 const _removeEventListener = function (target, event, callback) {
     if (target.events[event] !== undefined) {
@@ -30,7 +30,7 @@ const _removeEventListener = function (target, event, callback) {
             delete target.events[event]; //Delete if event not in use
         }
     }
-}
+};
 
 const _callEvents = function (target, event) {
     if (target.events[event] !== undefined) {
@@ -42,7 +42,7 @@ const _callEvents = function (target, event) {
             callback();
         }
     }
-}
+};
 
 //EVENT HANDLER
 class EventHandler {
