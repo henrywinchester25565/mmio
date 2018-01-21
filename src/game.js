@@ -7,77 +7,85 @@ console.log("Loaded: game.js");
 
 //REQUIREMENTS
 const $ENTITY = require('./entity.js');
-const $EVENTS = new require('./events.js').handler();
+const $EVENTS = require('./events.js').handler;
+const $WORLD  = require('./world.js');
+
+//PARAMETERS
+const $DEFAULT_PARAMS = {
+    max_entities: 50,
+    max_players: 12,
+    world_width: 144,
+    world_height: 144
+};
 
 //GAME
-//Could make this IE compatible, but I don't like IE. :)
 class Game {
 
-    constructor (clients) {
-        this.entities = {};
-        this.players = {};
-        this.world = undefined;
+    constructor (args) {
+        this.setParameters(args); //this.args <= the games parameters
+        this.players = [];
+        this.world = new $WORLD(this.args.world_width, this.args.world_height);
+        //TEMP
+        this.addWalls([
+            {x: 0, y:0, w: 24, h: 1}
+        ]);
+        this.start();
     }
 
-    init () {
+    //Used to update specific parameters
+    setParameters (args) {
+        if (args === undefined) {
+            this.args = $DEFAULT_PARAMS;
+        }
+        else {
+            for (let param in $DEFAULT_PARAMS) {
+                if (!(param in args)) {
+                    args[param] = $DEFAULT_PARAMS[param];
+                }
+            }
+            this.args = args;
+        }
+    }
+
+    queuePlayer (ply) {
+        let index = this.players.indexOf(ply); //If already in game
+        if (this.players.length <= this.args.max_players && index === -1) {
+            this.players.push(ply);
+        }
+    }
+
+    //Try not to add players after the start of the game
+    addPlayer (ply) {
+        this.queuePlayer(ply);
+        let scrapedWorld = this.world.scrapeAll();
+        ply.socket.emit('world_init', scrapedWorld);
+    }
+
+    killPlayer (ply) {
         //TODO
-        //SET-UP WORLD
-        //ADD CLIENTS AS PLAYERS
-        //SEND WORLD TO CLIENTS
-        //SET READY
-        //If there's an issue along the way, the game will never be ready
     }
 
-    //Adds entity to game
-    addEntity (entity) {
-        //Is an entity
-        if ($ENTITY.isEnt(entity)) {
-            this.entities[entity.id] = entity;
-            this.world.addChild(entity);
-            return true;
+    addWalls (walls) {
+        for (let i = 0; i < walls.length; i++) {
+            let bp = walls[i]; //blueprint
+            let wall = new $ENTITY.ents.wall(bp.x, bp.y, bp.w, bp.h);
+            this.world.queueChild(wall);
         }
-        return false;
     }
 
-    //Removes entity from game
-    removeEntity (entity) {
-        //Is an entity
-        if ($ENTITY.isEnt(entity) && entity.id !== undefined) {
-            //Remove from world
-            this.world.removeChild(entity);
-            //Splice from entities
-            delete this.entities[entity.id];
-            return true;
+    start () {
+        console.log('> Starting Game');
+        this.world.start();
+
+        let scrapedWorld = this.world.scrapeAll();
+        for (let i = 0; i < this.players.length; i++) {
+            let ply = this.players[i];
+            ply.socket.emit('world_init', scrapedWorld);
         }
-        return false;
-    }
 
-    //Adds player to game
-    addPlayer (player) {
-        //Is a player
-        if (player.type === 'player' && player.id !== undefined) {
-            this.players[player.id] = player;
-            return this.addEntity(player);
-        }
-        return false;
-    }
-
-    //Removes player from game
-    removePlayer (player) {
-        //Is a player
-        if (player.type === 'player' && player.id !== undefined) {
-            delete this.players[player.id];
-            return this.removeEntity(player);
-        }
-        return false;
-    }
-
-    //PLAY GAME
-    play () {
-        //TODO play game
     }
 
 }
 
 //EXPORTS
-exports.game = Game;
+module.exports = Game;
