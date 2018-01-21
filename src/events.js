@@ -2,7 +2,7 @@
 'use strict';
 
 //NOTES
-//Use 'on' and 'emit' to keep similar to socket.io
+//Use 'on', 'once' and 'emit' to keep similar to socket.io
 //Adds events to events object in arrays, and calls sequentially
 
 //LOADED
@@ -12,6 +12,7 @@ console.log('Loaded: events.js');
 const $ARRAY = require('./general.js').array;
 
 //FUNCTIONALITY
+//Kept out of class to hide when used.
 const _addEventListener = function (target, event, callback) {
     //If event already exists
     if (target.events[event] !== undefined) {
@@ -21,6 +22,7 @@ const _addEventListener = function (target, event, callback) {
     else {
         target.events[event] = [callback];
     }
+    //console.log(target.events[event]);
 };
 
 const _removeEventListener = function (target, event, callback) {
@@ -30,16 +32,22 @@ const _removeEventListener = function (target, event, callback) {
             delete target.events[event]; //Delete if event not in use
         }
     }
+    //console.log(target.events[event]);
 };
 
 const _callEvents = function (target, event) {
     if (target.events[event] !== undefined) {
-        for (let i = 0; i < target.events[event].length; i++) {
-            let callback = target.events[event][i];
+        let callbacks = target.events[event];
+        //console.log(callbacks);
+        for (let i = 0; i < callbacks.length; i++) {
+            //console.log(i);
+            let callback = callbacks[i];
+            //delete if one-shot
+            callback();
             if (callback.once) {
                 _removeEventListener(target, event, callback);
+                i--;
             }
-            callback();
         }
     }
 };
