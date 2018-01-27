@@ -14,8 +14,8 @@ const $WORLD  = require('./world.js');
 const $DEFAULT_PARAMS = {
     max_entities: 50,
     max_players: 12,
-    world_width: 144,
-    world_height: 144
+    world_width: 24,
+    world_height: 24
 };
 
 //GAME
@@ -24,12 +24,46 @@ class Game {
     constructor (args) {
         this.setParameters(args); //this.args <= the games parameters
         this.players = [];
+
         this.world = new $WORLD(this.args.world_width, this.args.world_height);
+
+        this.changed = []; //Entities changed since last update
+        
+        let self = this;
+        this.world.onUpdate(function(changed){
+            //console.log('update');
+            for (let i = 0; i < changed.length; i++) {
+                if (self.changed.indexOf(changed[i]) === -1) {
+                    self.changed.push(changed[i]);
+                }
+            }
+        });
+
         //TEMP
         this.addWalls([
-            {x: 0, y:0, w: 24, h: 1}
+            {x: 0, y:0, w: 1, h: 23},
+            {x: 0, y: 0, w: 23, h: 1},
+            {x: 23, y: 0, w: 1, h: 23},
+            {x: 0, y: 23, w: 23, h: 1},
+            {x: 6, y: 6, w: 12, h: 1},
+            {x:6, y: 6, w: 1, h: 6}
         ]);
-        this.start();
+        let light = new $ENTITY.ents.light(3, 3, 0xff0000, 1);
+        let light2 = new $ENTITY.ents.light(8, 10, 0xffffff, 2);
+        this.world.queueChild(light);
+        this.world.queueChild(light2);
+
+        let phys = new $ENTITY.ents.phys(12, 16);
+        phys.mass = 1;
+        phys.forces.push({x: 1000, y: 1000});
+        this.world.queueChild(phys);
+
+        let phys2 = new $ENTITY.ents.phys(12.5, 20);
+        phys2.mass = 1;
+        phys2.forces.push({x: 0, y: 0});
+        //this.world.queueChild(phys2);
+
+        this.running = false;
     }
 
     //Used to update specific parameters
@@ -57,8 +91,10 @@ class Game {
     //Try not to add players after the start of the game
     addPlayer (ply) {
         this.queuePlayer(ply);
-        let scrapedWorld = this.world.scrapeAll();
-        ply.socket.emit('world_init', scrapedWorld);
+        if (this.running) {
+            let scrapedWorld = this.world.scrapeAll();
+            ply.socket.emit('world_init', scrapedWorld);
+        }
     }
 
     killPlayer (ply) {
@@ -75,6 +111,7 @@ class Game {
 
     start () {
         console.log('> Starting Game');
+        this.running = true;
         this.world.start();
 
         let scrapedWorld = this.world.scrapeAll();
@@ -83,6 +120,28 @@ class Game {
             ply.socket.emit('world_init', scrapedWorld);
         }
 
+        //Send updates every 100ms
+        let self = this;
+        let updateClients = function () {
+            if (self.running) {
+                let changed = [];
+                for (let i = 0; i < self.changed.length; i++) {
+                    changed.push(self.changed[i].scrape());
+                }
+                for (let i = 0; i < self.players.length; i++) {
+                    self.players[i].socket.emit('update', changed);
+                }
+            }
+            setTimeout(updateClients, 50);
+        };
+        //Repeat every 100ms while running
+        setTimeout(updateClients, 50);
+    }
+
+    stop () {
+        console.log('> Stopping Game');
+        this.running = false;
+        this.world.stop();
     }
 
 }

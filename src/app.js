@@ -9,10 +9,16 @@
 //$CONSTANT - A $ preceding all caps (separated by _) for constants.
 //_function - In some cases constant functions may be written like this, but only if they are intended to be
 //          - functions for an object, and can't be used 'stand-alone'.
+//Parameters use lowercase and underscores.
+//
 //Try and keep exported function names in objects to three letters (e.g. rmv, add).
 //Unit - One unit is ~ treated like a metre
 //
-//Server-Side code is written to be easily converted into a working client-side equivalent
+//Server-Side code is written to be easily converted into a working client-side equivalent.
+//
+//I declare functions as constant variables. They don't get hoisted by I prefer to treat them entirely like objects,
+//and it helps when thinking about structure.
+//I might change this later on, but I don't think I need to.
 
 //LOADED
 console.log("Loaded: app.js");
@@ -25,7 +31,7 @@ const $HTTP     = require('http').Server($APP);
 const $IO       = require('socket.io')($HTTP);
 
 //PARAMETERS
-const $ROOT = path.resolve('mmio') + '/';
+const $ROOT = $PATH.resolve('mmio') + '/';
 const $PORT = 25566;
 
 //SERVING FILES
@@ -37,6 +43,22 @@ $APP.get('/', function(req, res){
     res.sendFile($ROOT + 'public/html/index.html');
 });
 
+//GAME
+const $GAME = require('./game.js');
+const $PLAYER = require('./player.js');
+const game = new $GAME();
+
+$IO.on('connection', function (socket) {
+    console.log('Connection: ' + socket.id);
+    let ply = new $PLAYER.player(socket, $PLAYER.classes.default);
+    game.addPlayer(ply);
+    if (!game.running) {
+        game.start();
+    }
+});
+
+
+//IMPORTANT: MUST BE LAST
 //HTTP listen on $PORT for connections
 $HTTP.listen($PORT, function(){
     console.log('Listening on port: ' + $PORT);

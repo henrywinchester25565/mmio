@@ -13,9 +13,10 @@ const $VECTOR_IS = function (a) {
 //Add components
 const $VECTOR_ADD = function (a, b) {
     if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
-        a.x =+ b.x;
-        a.y =+ b.y;
-        return a;
+        return {
+            x: a.x + b.x,
+            y: a.y + b.y
+        };
     }
     else {return null}
 };
@@ -27,9 +28,10 @@ const $VECTOR_MULTIPLY = function (a, b) {
     if ($VECTOR_IS(a)) {vector = a; scalar = b;}
     else if ($VECTOR_IS(b)) {vector = b; scalar = a;}
     else {return null}
-    vector.x = vector.x * scalar;
-    vector.y = vector.y * scalar;
-    return vector;
+    return {
+        x: vector.x * scalar,
+        y: vector.y * scalar
+    };
 };
 
 //Dot product, for angle between vectors
@@ -52,6 +54,8 @@ const $VECTOR_MAGNITUDE = function (a) {
 //Angle between two vectors
 const $VECTOR_ANGLE_LOCAL = function (a, b) {
     if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
+        let div = $VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b);
+        if (div === 0) {return 0}
         let cosine = $VECTOR_DOT(a, b) / ($VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b));
         return Math.acos(cosine);
     }
@@ -63,10 +67,38 @@ const $VECTOR_ANGLE_GLOBAL = function (a) {
     if ($VECTOR_IS(a)) {
         let b = {x: 0, y: 1};
         let angle = $VECTOR_ANGLE_LOCAL(a, b);
-        if (a.x < 0) {angle =+ Math.PI}
+        if (a.x < 0) {angle = Math.PI * 2 - angle}
         return angle;
     }
     else {return null}
+};
+
+const $VECTOR_FROM_DIR = function (scalar, direction) {
+    return {
+        x: scalar * Math.sin(direction),
+        y: scalar * Math.cos(direction)
+    };
+};
+
+const $VECTOR_NORMALISE = function (a) {
+    if ($VECTOR_IS(a)) {
+        let mag = $VECTOR_MAGNITUDE(a);
+        return {
+            x: a.x/mag,
+            y: a.y/mag
+        }
+    }
+    else {return null;}
+};
+
+const $VECTOR_CLONE = function (a) {
+    if ($VECTOR_IS(a)) {
+        return {
+            x: a.x,
+            y: a.y
+        }
+    }
+    else {return null;}
 };
 
 //ALL VECTOR OPERATIONS
@@ -76,7 +108,10 @@ const $VECTOR = {
     dot: $VECTOR_DOT,
     mag: $VECTOR_MAGNITUDE,
     anl: $VECTOR_ANGLE_LOCAL,
-    ang: $VECTOR_ANGLE_GLOBAL
+    ang: $VECTOR_ANGLE_GLOBAL,
+    vfd: $VECTOR_FROM_DIR,
+    nrm: $VECTOR_NORMALISE,
+    cln: $VECTOR_CLONE
 };
 
 //ARRAY OPERATIONS

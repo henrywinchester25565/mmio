@@ -8,10 +8,11 @@ console.log("Loaded: bounds.js");
 const $VECTOR = require ('./general').vector;
 
 //TEST IF IN BOUNDS
-const $IN_BOUNDS = function (a, b) {
+const $IN_BOUNDS = function (a, b, normal) {
     switch (b.type) {
-        case 'point': return a.inBoundsPoint(b);
-        case 'box': return a.inBoundsBox(b);
+        case 'point': return a.inBoundsPoint(b, normal);
+        case 'box': return a.inBoundsBox(b, normal);
+        case 'circle': return a.inBoundsCircle(b, normal);
         default: return false;
     }
 };
@@ -32,35 +33,46 @@ class Point {
     }
 
     //For another point
-    inBoundsPoint (point) {
+    inBoundsPoint (point, normal) {
+
+        if (normal === true) {
+            //TODO
+        }
+
         return this.xMin === point.xMin && this.yMin === point.yMin;
     }
 
-    //For a line
+    //TODO For a line
 
     //For a box
-    inBoundsBox (bounds) {
+    inBoundsBox (bounds, normal) {
         let x = this.xMin;
         let y = this.yMin;
+
+        if (normal === true) {
+            //TODO
+        }
+
         return (x >= bounds.xMin && x <= bounds.xMax) && (y >= bounds.yMin && y <= bounds.yMax);
     }
+    
+    inBoundsCircle (bounds, normal) {
+        let dx = this.xMin - bounds.x;
+        let dy = this.yMin - bounds.y;
 
-    //TODO For a circle
-    inBoundsCircle () {}
+        if (normal === true) {
+            //TODO
+        }
+
+        return (dx*dx + dy*dy) <= (bounds.radius*bounds.radius);
+    }
 
     inBounds (bounds) {
         return $IN_BOUNDS(this, bounds);
     }
 
-    //Get the minimum data for client transfer
-    scrape () {
-        return {
-            xMin: this.x,
-            yMin: this.y,
-            xMax: this.x,
-            yMax: this.y,
-            type: this.type
-        };
+    getNormal (bounds) {
+        return $IN_BOUNDS(this, bounds, true);
     }
 
 }
@@ -93,22 +105,34 @@ class Box {
     }
 
     //For a point
-    inBoundsPoint (point) {
+    inBoundsPoint (point, normal) {
         let x = point.xMin;
         let y = point.yMin;
+        if (normal === true) {
+            let dx = x - Math.max(this.xMin, Math.min(x, this.xMax)); //Nearest point from point to box
+            let dy = y - Math.max(this.yMin, Math.min(y, this.yMax));
+            return $VECTOR.nrm({x: dx, y: dy}); //Normalised normal
+        }
         return (x >= this.xMin && x <= this.xMax) && (y >= this.yMin && y <= this.yMax);
     }
 
     //For another Box
-    inBoundsBox (bounds) {
+    inBoundsBox (bounds, normal) {
+        if (normal === true) {
+            //TODO
+        }
         if (this.xMax < bounds.xMin) {return false}
         if (this.xMin >= bounds.xMax) {return false}
         if (this.yMax < bounds.yMin) {return false}
         return this.yMin <= bounds.yMax;
     }
 
-    inBoundsCircle (bounds) {
-        //TODO
+    inBoundsCircle (circle, normal) {
+        //Test from https://yal.cc/rectangle-circle-intersection-test/
+        let dx = circle.x - Math.max(this.xMin, Math.min(circle.x, this.xMax));
+        let dy = circle.y - Math.max(this.yMin, Math.min(circle.y, this.yMax));
+        if (normal === true) {return $VECTOR.nrm({x: dx, y: dy});}
+        return (dx*dx + dy*dy) <= (circle.radius*circle.radius);
     }
 
     //Wrapper function
@@ -116,9 +140,13 @@ class Box {
         return $IN_BOUNDS(this, bounds);
     }
 
+    getNormal (bounds) {
+        return $IN_BOUNDS(this, bounds, true);
+    }
+
 }
 
-//CIRCLE TODO This needs a rewrite
+//CIRCLE
 class Circle {
 
     //x, y from top left corner
@@ -132,39 +160,42 @@ class Circle {
     update (x, y) {
         this.x = x;
         this.y = y;
+        let r = this.radius;
+        this.xMax = this.x + r;//Required for broad phase collision detection
+        this.xMin = this.x - r;
     }
 
-    inBoundsPoint (x, y) {
-        let xC = this.x + this.radius;
-        let yC = this.y + this.radius;
-        let dist = $VECTOR.mag({x: x - xC, y: y - yC});
-        return dist <= this.radius;
+    inBoundsPoint (point, normal) {
+        let dx = point.xMin - this.x;
+        let dy = point.yMin - this.y;
+        if (normal === true) {return $VECTOR.nrm({x: dx, y: dy});}
+        return (dx*dx + dy*dy) <= (this.radius*this.radius);
     }
 
-    inBoundsCircle (circle) {
-        let xC = this.x + this.radius;
-        let yC = this.y + this.radius;
-        let xD = circle.x + circle.radius;
-        let yD = circle.y + circle.radius;
-
-        let dist = $VECTOR.mag({x: xD - xC, y: yD - yC});
+    inBoundsCircle (circle, normal) {
+        let dir = {x: circle.x - this.x, y: circle.y - this.y};
+        if (normal === true) {return $VECTOR.nrm(dir);}
+        let dist = $VECTOR.mag(dir);
         return dist <= this.radius + circle.radius;
     }
 
-    inBoundsBox (Box) {
-        //TODO
+    inBoundsBox (box, normal) {
+        //Test from https://yal.cc/rectangle-circle-intersection-test/
+        let dx = this.x - Math.max(box.xMin, Math.min(this.x, box.xMax)); //d for distance
+        let dy = this.y - Math.max(box.yMin, Math.min(this.y, box.yMax));
+        if (normal === true) {return $VECTOR.nrm({x: dx, y: dy});}
+        return (dx*dx + dy*dy) <= (this.radius*this.radius);
     }
 
-    inBounds (bounding) {
-        switch (bounding.type) {
-            case 'Box': return this.inBoundsBox(bounding);
-            case 'circle': return this.inBoundsCircle(bounding);
-            default:
-                if (typeof bounding.x !== 'undefined' && typeof bounding.y !== 'undefined') {
-                    return this.inBoundsPoint(bounding.x, bounding.y);
-                }
-        }
+    inBounds (bounds) {
+        return $IN_BOUNDS(this, bounds);
     }
+
+    getNormal (bounds) {
+        return $IN_BOUNDS(this, bounds, true);
+    }
+
+
 }
 
 //ALL BOUNDING
@@ -172,7 +203,7 @@ const $BOUNDS = {
     box: Box,
     point: Point,
     //line: Line
-    //circle: BoundingCircle
+    circle: Circle
 };
 
 //CHECK IF BOUNDS
@@ -183,7 +214,6 @@ const $IS_BOUNDS = function (bounds) {
 //TESTS FOR COLLISIONS
 //The entities aren't bounds themselves, but contain a bounds property
 //Does both broad and narrow phases
-//Entities should contain entity for specific collision checks
 const $COLLISIONS = function (entities, specific) {
 
     //BROAD PHASE
@@ -191,10 +221,9 @@ const $COLLISIONS = function (entities, specific) {
     let map = [];
     //Iterates over entities and orders in map
     for (let i = 0; i < entities.length; i++) {
-
         //Start and end points
         let start = {entity: entities[i], x: entities[i].bounds.xMin, start: true};
-        let end   = {entity: entities[i], x: entities[i].bounds.xMax, start: false};
+        let end = {entity: entities[i], x: entities[i].bounds.xMax, start: false};
 
         //Iterate over - O(nlogn)
         let points = [start, end];
@@ -204,7 +233,7 @@ const $COLLISIONS = function (entities, specific) {
             let ceil = map.length;
             let inserted = false;
             while (!inserted) {
-                let index = Math.floor((ceil + floor)/2);
+                let index = Math.floor((ceil + floor) / 2);
                 //Found insertion index
                 if (ceil - floor === 1) {
                     map.splice(ceil, 0, points[j]);
@@ -223,6 +252,7 @@ const $COLLISIONS = function (entities, specific) {
                 }
             }
         }
+
     }
 
     let collisions = [];
@@ -233,22 +263,14 @@ const $COLLISIONS = function (entities, specific) {
         let active = [];
         for (let i = 0; i < map.length; i++) {
             let current = map[i].entity;
-            if (map[i].start) {
-                //Add collision pairs
-                if (current === entity || entity === undefined) {
-                    for (let j = 0; j < active.length; j++) {
-                        //Exclude chunk chunk collisions
-                        //TODO Temp fix, find better solution
-                        if (!(current.type === 'chunk' && active[j].type === 'chunk')) {
-                            //NARROW PHASE
-                            if (current.bounds.inBounds(active[j].bounds)) {
-                                collisions.push([current, active[j]]);
-                            }
-                        }
-
+            if (map[i].start) { //If its the start of the bounds
+                for (let j = 0; j < active.length; j++) { //For all the currently active bounds
+                    //NARROW PHASE
+                    if (current.bounds.inBounds(active[j].bounds)) { //Perform a bounds check
+                        collisions.push([current, active[j]]); //And add to collisions
                     }
-                    active.push(current);
                 }
+                active.push(current);
             }
             //Remove when ends
             else {

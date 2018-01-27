@@ -6,6 +6,8 @@ console.log("Loaded: world.js");
 
 //REQUIREMENTS
 const $BOUNDS = require('./bounds.js');
+const $ENTITY = require('./entity.js');
+const $EVENTS = require('./events.js');
 
 //PARAMETERS
 const $CHUNK_SIZE = 24;
@@ -39,16 +41,25 @@ class Chunk {
 }
 
 //WORLD
-//A group of chunks with no predetermined size
+const $TIME_STEP = 15; //update interval in ms
 class World {
 
     //Width and height in units
     constructor (w, h) {
         this.w = w;
         this.h = h;
-        this.changedChildren = [];
+        this.queued = [];
         this.children = [];
         this.buildChunks();
+        
+        this.events = new $EVENTS.handler();
+
+        this.running = false;
+    }
+    
+    //Wrapper for update event
+    onUpdate (handler) {
+        this.events.on('update', handler);
     }
 
     //w, h in chunks
@@ -71,12 +82,14 @@ class World {
         let collisions = $BOUNDS.getCollisions(this.chunks, entities);
         for (let i = 0; i < collisions.length; i++) {
             let pair = collisions[i];
-            console.log(pair[0].type, pair[1].type);
             //If one is a chunk, then add entity to chunk
+            let entity;
             if (pair[0].type === 'chunk') {
+                entity = pair[1];
                 pair[0].addChild(pair[1]);
             }
-            else if (pair[1].type === 'chunk') {
+            else {
+                entity = pair[0];
                 pair[1].addChild(pair[0]);
             }
         }
@@ -85,13 +98,56 @@ class World {
     //queue
     //added when handling changed/moved children every 50ms
     queueChild (entity) {
-        this.changedChildren.push(entity);
+        this.queued.push(entity);
+        this.children.push(entity);
+    }
+
+    //the update loop
+    update (self) {
+        //console.log('UPDATE');
+        if (self.running) {
+            //Keep track of which children are changed while updating
+            let changed = [];
+            //console.log('update');
+            //console.log(self.children);
+            let collisions = $BOUNDS.getCollisions(self.children);
+            for (let i = 0; i < collisions.length; i++) {
+                let pair = collisions[i];
+                //console.log(pair[0].type, pair[1].type);
+                pair[0].collide(pair[1], $TIME_STEP);
+                pair[1].collide(pair[0], $TIME_STEP);
+            }
+
+            for (let i = 0; i < self.children.length; i++) {
+                self.children[i].update($TIME_STEP);
+                
+                if (self.children[i].changed) { //if changed
+                    if (changed.indexOf(self.children[i] === -1)) {
+                        changed.push(self.children[i]);
+                    }
+                    self.changed = false;
+                }
+            }
+            self.chunkChanges(changed);
+            self.events.emit('update', changed);
+            setTimeout(self.update, $TIME_STEP, self);
+        }
     }
 
     //readies the world
     start () {
+        this.running = true;
         console.log('>> Starting World');
-        this.chunkChanges(this.changedChildren);
+        this.chunkChanges(this.queued);
+        delete this.queued;
+        let self = this;
+        setTimeout(this.update, $TIME_STEP, self);
+    }
+
+    //stops the world
+    stop () {
+        console.log('>> Stopping World');
+        this.running = false;
     }
 
     //Remove from chunks
@@ -113,15 +169,6 @@ class World {
         if (index > -1) {
             this.children.splice(index, 1);
         }
-    }
-
-    //Scrape and store changed children only
-    scrape () {
-        let scrapedChildren = [];
-        for (let i = 0; i < children.length; i++) {
-            scrapedChildren.push(this.changedChildren[i].scrape());
-        }
-        return {children: scrapedChildren};
     }
 
     //For new players
