@@ -1,176 +1,185 @@
-"use strict";
-//Requirements
-const $VECTOR = require('./general').$VECTOR;
-
-//Should always be shorted because of id selection and kill requirement
-const $ENTITIES = [];
-
-//An Entity has a physical representation in the World
-class Entity {
-
-    constructor (x, y) {
-        this.x = x;
-        this.y = y;
-
-        //Look for empty id
-        //Linear search
-        let found = false;
-        let index = 0;
-        let max = -1;
-        while (!found) {
-            //Out of bounds, no gaps
-            if (typeof $ENTITIES[index] === 'undefined') {
-                this.id = max + 1;
-                $ENTITIES.push(this);
-                found = true;
-            }
-            else {
-                let id = $ENTITIES[index].id;
-                //Greater by 1 or the same
-                if (id - max === 1 || id - max === 0) {
-                    max = id;
-                    index++;
-                }
-                //Gap
-                else if (id - max > 1) {
-                    this.id = max + 1;
-                    $ENTITIES.push(this);
-                    found = true;
-                }
-            }
-        }
-
-        this.controllers = [];
-    }
-
-    //Controllers should be chained and permanent/can't remove
-    add (controller) {
-        this.controllers.push(controller);
-    }
-
-    kill () {
-        //Binary search
-        let floor = -1;
-        let ceil  = $ENTITIES.length;
-        while (true) {
-            //There is still space between bounds
-            let index = Math.floor((ceil - floor) / 2) + floor;
-            if (ceil - floor > 1) {
-                let id = $ENTITIES[index].id;
-                if (id === this.id) {
-                    $ENTITIES.splice(index, 1);
-                    return true;
-                }
-                else if (id > this.id) {
-                    ceil = index;
-                }
-                else if (id < this.id) {
-                    floor = index;
-                }
-            }
-            else {
-                return false;
-            }
-        }
-    }
-
-    //Iterates through controllers in chain, updating the data obj
-    //Data obj passed through each controller
-    //Alternately, data can be set in controllers
-    //Set used in case of client-server
-    //Uses final x, y to update own pos
-    update (data) {
-        if (typeof data === 'undefined') {
-            data = {x: this.x, y: this.y, ent: this};
-            for (let i = 0; i < this.controllers.length; i++) {
-                data = this.controllers.update(data);
-            }
-        }
-        else {
-            data.ent = this;
-            for (let i = 0; i < this.controllers.length; i++) {
-                this.controllers.set(data);
-            }
-        }
-        this.x = data.x;
-        this.y = data.y;
-    }
-
+//From scraped entities
+function entityFromScrape (scrape) {
+    return entity[scrape.type].fromScrape(scrape);
 }
 
-const $COLLIDE = [];
-let $DO_COLLIDE = true;
-class PhysicsController {
+//For materials
+/*const textureLoader = new THREE.TextureLoader();
+const textures = {
+    floor_matte: textureLoader.load('textures/floor_base.png'),
+    floor_normal: textureLoader.load('textures/floor_normal.png'),
+    floor_roughness: textureLoader.load('textures/floor_roughness.png')
+};*/
 
-    //Basic physical elements, for mass, speed and friction
-    constructor (mass, maxSpeed, frictionCoefficient) {
-        this.mass = mass;
-        this.maxSpeed = maxSpeed;
-        //For friction forces calculation
-        if (typeof frictionCoefficient === 'undefined') {this.u = 5;}
-        else {this.u = frictionCoefficient;}
-        this.velocity = {x: 0, y: 0};
+//ENTITIES
+//Active entities, for anything from the server
+const entities = {};
 
-        this.collides = false;
-    }
+//WALL
+let wall_material_side =  new THREE.MeshStandardMaterial({color: 0x0202020});
+let wall_material_top =  new THREE.MeshBasicMaterial({color: 0x000000});
+const Wall = {
+    material:
+        [
+            wall_material_side,
+            wall_material_side,
+            wall_material_side,
+            wall_material_side,
+            wall_material_top,
+            wall_material_side
+        ],
+    height: 1.4,
+    create:
+        function (x, y, w, h, id) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+            this.id = id;
+            let geometry = new THREE.BoxBufferGeometry(w, h, Wall.height + 0.1);
+            this.obj3D = new THREE.Mesh(geometry, Wall.material);
+            this.obj3D.position.set(this.x + 0.5*w, this.y + 0.5*h, Wall.height/2 - 0.1);
+            this.obj3D.castShadow = true;
+            this.obj3D.receiveShadow = true;
 
-    update (data) {
+            let self = this;
+            this.update = function (x, y) {
+                self.x = x;
+                self.y = y;
+                self.obj3D.position.x = x + 0.5*w;
+                self.obj3D.position.y = y + 0.5*h;
+            };
 
-        let result = {x: 0, y: 0}; //Resultant force
-
-        //Add every force applied to entity
-        if (typeof data.forces !== 'undefined') {
-            for (let i = 0; i < data.forces.length; i++) {
-                result = $VECTOR.add(result, data.forces[i]);
-            }
+            entities[this.id] = this;
+        },
+    fromScrape:
+        function (scrape) {
+            return new Wall.create(scrape.x, scrape.y, scrape.w, scrape.h, scrape.id);
         }
-
-        //Naturally limits speed to max speed - terminal velocity
-        //Not drag
-        let speed = $VECTOR.mag(this.velocity);
-        result = $VECTOR.add(result, $VECTOR.pro(-1 * (speed/this.maxSpeed), result));
-
-        //Friction slows to halt
-        let dir = $VECTOR.ang(this.velocity);
-        //Friction against direction of velocity, but only if travelling more than 0.4Us^-1
-        result = speed <= 0.4 ? result : $VECTOR.add(result, $VECTOR.pro(-1 * this.mass * 10 * this.u, dir));
-
-        //Velocity
-        let dVel = $VECTOR.pro(data.dt/this.mass, result);
-        let velocity = $VECTOR.add(this.velocity, dVel);
-
-        //Low velocity and no new forces
-        if ($VECTOR.mag(velocity) < 0.4 && result.x === 0 && result.y === 0) {
-            velocity = {x: 0, y: 0};
-        }
-
-        //Finally set velocity
-        this.velocity = velocity;
-
-        //Calculate new x, y
-        let dDis = $VECTOR.pro(data.dt, this.velocity);
-        data.x =+ dDis.x;
-        data.y =+ dDis.y;
-        if (this.collides) {$COLLIDE.push(this);}
-        return data;
-
-    }
-
-    set (data) {
-        if (typeof data.velocity !== 'undefined') {this.velocity = data.velocity}
-        if (typeof data.mass !== 'undefined') {this.mass = data.mass}
-        if (typeof data.maxSpeed !== 'undefined') {this.maxSpeed = data.maxSpeed}
-        if (typeof data.u !== 'undefined') {this.u = data.u}
-        if (typeof data.forces !== 'undefined') {this.forces = data.forces;}
-    }
-
-}
-
-const $CONTROLLERS = {
-    phy: PhysicsController
 };
 
-//EXPORTS
-//exports.$ENTITIES = $ENTITIES;
-exports.$ENTITY = Entity;
-exports.$CONTROLLERS = $CONTROLLERS;
+//FLOOR
+const Floor = {
+    create:
+        function (w, h) {
+            this.w = w;
+            this.h = h;
+
+            //Creating material
+            let material = new THREE.MeshStandardMaterial({color: 0xffffff});
+
+            //Setting up textures and tiling
+            /*let matte = textures.floor_matte.clone();
+            matte.needsUpdate = true;
+            matte.wrapS = THREE.RepeatWrapping;
+            matte.wrapT = THREE.RepeatWrapping;
+            matte.repeat.set(w/2, h/2);
+
+            let normal = textures.floor_normal.clone();
+            normal.needsUpdate = true;
+            normal.wrapS = THREE.RepeatWrapping;
+            normal.wrapT = THREE.RepeatWrapping;
+            normal.repeat.set(w/2, h/2);
+
+            let roughness = textures.floor_roughness.clone();
+            roughness.needsUpdate = true;
+            roughness.wrapS = THREE.RepeatWrapping;
+            roughness.wrapT = THREE.RepeatWrapping;
+            roughness.repeat.set(w/2, h/2);
+
+            //Applying textures to material
+            material.map = matte;
+            material.normalMap = normal;
+            material.normalScale.set(0.2, 0.2);
+            material.roughnessMap = roughness;*/
+
+            let geometry = new THREE.PlaneBufferGeometry(w, h);
+            this.obj3D = new THREE.Mesh(geometry, material);
+            this.obj3D.position.set(w/2, h/2, 0);
+            this.obj3D.receiveShadow = true;
+        }
+};
+
+//LIGHT
+const Light = {
+    create:
+        function (x, y, color, intensity, id, dist, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z || 1;
+            this.id = id;
+
+            this.color = color;
+            this.intensity = intensity;
+            this.distance = dist;
+            this.obj3D = new THREE.PointLight(color, intensity, dist);
+            this.obj3D.position.set(x, y, this.z);
+            this.obj3D.castShadow = true;
+            this.obj3D.shadow.mapSize.width = 2048;
+            this.obj3D.shadow.mapSize.height = 2048;
+
+            entities[this.id] = this;
+        },
+    fromScrape:
+        function (scrape) {
+            return new Light.create(scrape.x, scrape.y, scrape.color, scrape.intensity, scrape.id, scrape.distance, scrape.z);
+        }
+};
+
+//DYNAMIC
+const Dynamic = {
+    material: new THREE.MeshStandardMaterial({color: 0xffffff}),
+    create:
+        function (x, y, r, id) {
+            this.x = x;
+            this.y = y;
+            this.r = r;
+            this.id = id;
+
+            this.velocity = {x: 0, y:0};
+            this.end = {x: 0, y: 0};
+            //this.last = 0;
+
+            let self = this;
+            //Update
+            this.update = function (x, y) {
+                self.last = 0;
+                self.x = self.end.x;
+                self.y = self.end.y;
+                self.obj3D.position.x = self.x;
+                self.obj3D.position.y = self.y;
+
+                self.end = {x: x, y: y};
+                self.velocity = {x: (self.end.x-self.x)/0.05, y: (self.end.y-self.y)/0.05};
+            };
+
+            //Animate
+            this.animate = function (dt) {
+                self.x = self.x + self.velocity.x*dt;
+                self.y = self.y + self.velocity.y*dt;
+                self.obj3D.position.x = self.x;
+                self.obj3D.position.y = self.y;
+            };
+
+            let geo = new THREE.CylinderBufferGeometry(r, r, r + 0.1, 32);
+            geo.rotateX(Math.PI/2);
+            this.obj3D = new THREE.Mesh(geo, Dynamic.material);
+            this.obj3D.castShadow = true;
+            this.obj3D.receiveShadow = true;
+            this.obj3D.position.set(this.x, this.y, r/2 - 0.1);
+        },
+    fromScrape:
+        function (scrape) {
+            return new Dynamic.create(scrape.x, scrape.y, scrape.r, scrape.id);
+        }
+        
+};
+
+//ENTITY
+//In object for access reasons
+//e.g Use entities[entity.type] to access entity class
+const entity = {
+    wall: Wall,
+    light: Light,
+    phys: Dynamic
+};

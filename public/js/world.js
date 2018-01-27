@@ -1,34 +1,36 @@
-"use strict";
-const $ENTITY = require('./entity.js').$ENTITY;
-const $AABB = require('./bounds.js').$AABB;
+//WORLD
+const World = {
+    create: function (scrape) {
+        this.w = scrape.w;
+        this.h = scrape.h;
 
-//Chunk side length in units
-const $CHUNK_SIZE = 24;
-class Chunk extends $AABB {
+        this.floor = new Floor.create(scrape.w, scrape.h);
 
-    //chunk x and y => x, y
-    constructor (x, y) {
-        super (x, y, $CHUNK_SIZE, $CHUNK_SIZE)
-        this.children = [];
-    }
-
-    addChild (child) {
-        this.children.push(child);
-    }
-    removeChild (child) {
-        let index = this.children.indexOf(child);
-        if (index > -1) {
-            this.children.splice(index, 1);
+        this.children = {};
+        for (let i = 0; i < scrape.children.length; i++) {
+            let ent = entityFromScrape(scrape.children[i]);
+            this.children[ent.id] = ent;
         }
+
+        let self = this;
+        this.getObj3Ds = function () {
+            let obj3Ds = [];
+            for (let ent in self.children) {
+                if (self.children.hasOwnProperty(ent)) {
+                    obj3Ds.push(self.children[ent].obj3D);
+                }
+            }
+            return obj3Ds;
+        };
+
+        this.update = function (dt) {
+            for (let ent in self.children) {
+                if (self.children.hasOwnProperty(ent)) {
+                    if (self.children[ent].update !== undefined) {
+                        self.children[ent].update(dt);
+                    }
+                }
+            }
+        };
     }
-
-}
-
-class World {
-
-    constructor () {
-
-    }
-
-}
-
+};

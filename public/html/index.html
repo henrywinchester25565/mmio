@@ -7,21 +7,19 @@
     </head>
 
     <body>
-        <canvas id="canvas" style="display: none"></canvas>
-        <!-- this isn't secure... -->
-        <form id="nickname">
-            <h1 id="displaytext" style="color: white">PLEASE ENTER A NICKNAME:</h1><br>
-            <input id="nick" type="text" name="name"><br>
-            <input type="submit" value="Submit">
-        </form>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <section id="render">
+            <!-- THIS IS WHERE THE GAME IS GOING TO BE RENDERED -->
+        </section>
         <script src="/socket.io/socket.io.js"></script>
-        <script src="js/createjs.min.js"></script>
-        <script src="js/util.js"></script>
+        <script src="js/three/three.js"></script>
+        <script src="js/three/shaders/CopyShader.js"></script>
+        <script src="js/three/postprocessing/EffectComposer.js"></script>
+        <script src="js/three/postprocessing/RenderPass.js"></script>
+        <script src="js/three/postprocessing/ShaderPass.js"></script>
+        <script src="js/three/shaders/FXAAShader.js"></script>
         <script src="js/entity.js"></script>
         <script src="js/world.js"></script>
-        <script src="js/camera.js"></script>
-        <script src="js/mmio.js"></script>
+        <script src="js/game.js"></script>
     </body>
 
 </html>
