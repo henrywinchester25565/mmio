@@ -117,6 +117,7 @@ const Light = {
             this.obj3D.castShadow = true;
             this.obj3D.shadow.mapSize.width = 2048;
             this.obj3D.shadow.mapSize.height = 2048;
+            //this.obj3D.shadow.bias = 0.0001;
 
             entities[this.id] = this;
         },
@@ -150,7 +151,7 @@ const Dynamic = {
                 self.obj3D.position.y = self.y;
 
                 self.end = {x: x, y: y};
-                self.velocity = {x: (self.end.x-self.x)/0.05, y: (self.end.y-self.y)/0.05};
+                self.velocity = {x: (self.end.x-self.x)/0.1, y: (self.end.y-self.y)/0.1};
             };
 
             //Animate
