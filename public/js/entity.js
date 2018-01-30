@@ -151,7 +151,7 @@ const Dynamic = {
                 self.obj3D.position.y = self.y;
 
                 self.end = {x: x, y: y};
-                self.velocity = {x: (self.end.x-self.x)/0.1, y: (self.end.y-self.y)/0.1};
+                self.velocity = {x: (self.end.x-self.x)/0.05, y: (self.end.y-self.y)/0.05};
             };
 
             //Animate

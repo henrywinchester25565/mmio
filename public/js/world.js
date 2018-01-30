@@ -7,9 +7,14 @@ const World = {
         this.floor = new Floor.create(scrape.w, scrape.h);
 
         this.children = {};
+
+        this.addChild = function (entity) {
+            this.children[entity.id] = entity;
+        };
+
         for (let i = 0; i < scrape.children.length; i++) {
             let ent = entityFromScrape(scrape.children[i]);
-            this.children[ent.id] = ent;
+            this.addChild(ent);
         }
 
         let self = this;

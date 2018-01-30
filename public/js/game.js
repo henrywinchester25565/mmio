@@ -5,7 +5,7 @@ const socket = io();
 let width = window.innerWidth;
 let height = window.innerHeight;
 
-const render = new THREE.WebGLRenderer();
+const render = new THREE.WebGLRenderer({antialias: true});
 render.shadowMap.enabled = true;
 render.shadowMap.type = THREE.PCFSoftShadowMap;
 render.setSize(width, height);
@@ -14,7 +14,7 @@ document.getElementById('render').appendChild(render.domElement);
 const scene_game = new THREE.Scene();
 const scene_game_camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 1000);
 
-scene_game_camera.position.set(12, 12, 40);
+scene_game_camera.position.set(12, 12, 60);
 
 const composer = new THREE.EffectComposer( render );
 composer.addPass( new THREE.RenderPass( scene_game, scene_game_camera ) );
@@ -43,14 +43,24 @@ socket.on('world_init', function(worldScrape){
     for (let i = 0; i < obj3Ds.length; i++) {
         scene_game.add(obj3Ds[i]);
     }
+    if (plyid !== undefined && ply === undefined) {
+        ply = world.children[plyid].obj3D;
+    }
 });
 
 socket.on('update', function(changed){
+    console.log('updated');
     for (let i = 0; i < changed.length; i++) {
         if (world.children.hasOwnProperty(changed[i].id)) {
             if (world.children[changed[i].id].update !== undefined) {
                 world.children[changed[i].id].update(changed[i].x, changed[i].y);
             }
+        }
+        else {
+            console.log('new');
+            let ent = entityFromScrape(changed[i]);
+            world.addChild(ent);
+            scene_game.add(ent.obj3D);
         }
     }
 
@@ -73,12 +83,25 @@ document.addEventListener("keyup", function (event) {
     }
 });
 
+window.setInterval(function(){
+    socket.emit('input', keys)
+}, 33);
+
+let ply;
+let plyid;
+socket.on('plyid', function (id) {
+    plyid = id;
+    if (world !== undefined) {
+        ply = world.children[plyid].obj3D;
+    }
+});
+
 let speed = 0.1;
 const clock = new THREE.Clock();
 //Animation
 function animate() {
     requestAnimationFrame( animate );
-    let dir = [0, 0];
+    /*let dir = [0, 0];
     for (let i = 0; i < keys.length; i++) {
         switch (keys[i]) {
             case 'KeyW': dir[1] = dir[1]+1; break;
@@ -86,17 +109,21 @@ function animate() {
             case 'KeyA': dir[0] = dir[0]-1; break;
             case 'KeyD': dir[0] = dir[0]+1; break;
         }
-    }
+    }*/
     //console.log(dir);
     //console.log(control);
-    scene_game_camera.position.x = scene_game_camera.position.x + speed * dir[0];
-    scene_game_camera.position.y = scene_game_camera.position.y + speed * dir[1];
 
-    for (let ent in world.children) {
-        if (world.children.hasOwnProperty(ent)) {
-            if (world.children[ent].animate !== undefined) {
-                world.children[ent].animate(clock.getDelta());
+    if (world !== undefined) {
+        for (let ent in world.children) {
+            if (world.children.hasOwnProperty(ent)) {
+                if (world.children[ent].animate !== undefined) {
+                    world.children[ent].animate(clock.getDelta());
+                }
             }
+        }
+        if (ply !== undefined) {
+            scene_game_camera.position.x = ply.position.x;
+            scene_game_camera.position.y = ply.position.y;
         }
     }
 
