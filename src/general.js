@@ -55,7 +55,7 @@ const $VECTOR_MAGNITUDE = function (a) {
 const $VECTOR_ANGLE_LOCAL = function (a, b) {
     if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
         let div = $VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b);
-        if (div === 0) {return 0}
+        if (div === 0) {return null}
         let cosine = $VECTOR_DOT(a, b) / ($VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b));
         return Math.acos(cosine);
     }
@@ -83,9 +83,18 @@ const $VECTOR_FROM_DIR = function (scalar, direction) {
 const $VECTOR_NORMALISE = function (a) {
     if ($VECTOR_IS(a)) {
         let mag = $VECTOR_MAGNITUDE(a);
-        return {
-            x: a.x/mag,
-            y: a.y/mag
+        if (mag > 0) {
+            return {
+                x: a.x / mag,
+                y: a.y / mag
+            }
+        }
+        //in case of bad vector
+        else {
+            return {
+                x: 0,
+                y: 0
+            }
         }
     }
     else {return null;}

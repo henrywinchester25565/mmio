@@ -28,6 +28,12 @@ class Player {
         this.socket = socket;
         this.id     = socket.id;
 
+        this.keys = [];
+        let self = this;
+        this.socket.on('input', function (keys) {;
+            self.keys = keys;
+        });
+
         this.inventory = [];
         this.plyClass = plyClass;
         this.stats = {};
@@ -35,10 +41,10 @@ class Player {
         this.xp = 0;
 
         $PLAYERS[socket.id] = this;
-    }
+        this.entity = new $ENTITY.ents.phys(5,5);
+        this.entity.wallBounce = false;
 
-    static generateEntity () {
-        return new $ENTITY.ents.entity(0, 0);
+        this.socket.emit('plyid', this.entity.id);
     }
 
     kill () {

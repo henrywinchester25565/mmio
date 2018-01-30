@@ -41,6 +41,7 @@ class Chunk {
 }
 
 //WORLD
+let tick = 0;
 const $TIME_STEP = 15; //update interval in ms
 class World {
 
@@ -98,25 +99,33 @@ class World {
     //queue
     //added when handling changed/moved children every 50ms
     queueChild (entity) {
+        entity.changed = true;
         this.queued.push(entity);
+        this.children.push(entity);
+    }
+
+    //TODO SEE IF I CAN JUST USE ABOVE WITHOUT STUFF
+    addChild (entity) {
+        entity.changed = true;
         this.children.push(entity);
     }
 
     //the update loop
     update (self) {
-        //console.log('UPDATE');
+        tick++;
         if (self.running) {
             //Keep track of which children are changed while updating
             let changed = [];
-            //console.log('update');
-            //console.log(self.children);
+            //console.log(tick);
             let collisions = $BOUNDS.getCollisions(self.children);
             for (let i = 0; i < collisions.length; i++) {
                 let pair = collisions[i];
-                //console.log(pair[0].type, pair[1].type);
+                //console.log('pair:', pair[0].type, pair[1].type);
                 pair[0].collide(pair[1], $TIME_STEP);
                 pair[1].collide(pair[0], $TIME_STEP);
             }
+
+            //console.log('collisions complete');
 
             for (let i = 0; i < self.children.length; i++) {
                 self.children[i].update($TIME_STEP);
@@ -125,12 +134,13 @@ class World {
                     if (changed.indexOf(self.children[i] === -1)) {
                         changed.push(self.children[i]);
                     }
-                    self.changed = false;
+                    self.children[i].changed = false;
                 }
             }
             self.chunkChanges(changed);
             self.events.emit('update', changed);
             setTimeout(self.update, $TIME_STEP, self);
+            //console.log('update complete');
         }
     }
 

@@ -9,6 +9,7 @@ console.log("Loaded: game.js");
 const $ENTITY = require('./entity.js');
 const $EVENTS = require('./events.js').handler;
 const $WORLD  = require('./world.js');
+const $VECTOR = require('./general.js').vector;
 
 //PARAMETERS
 const $DEFAULT_PARAMS = {
@@ -53,15 +54,15 @@ class Game {
         this.world.queueChild(light);
         this.world.queueChild(light2);
 
-        let phys = new $ENTITY.ents.phys(12, 16);
-        phys.mass = 1;
-        phys.forces.push({x: 1000, y: 1000});
+        let phys = new $ENTITY.ents.phys(12, 13, 0.6);
+        //phys.mass = 1;
+        phys.forces.push({x: 1000, y: 0});
         this.world.queueChild(phys);
 
-        let phys2 = new $ENTITY.ents.phys(12.5, 20);
-        phys2.mass = 1;
+        let phys2 = new $ENTITY.ents.phys(18, 12);
+        //phys2.mass = 5;
         phys2.forces.push({x: 0, y: 0});
-        //this.world.queueChild(phys2);
+        this.world.queueChild(phys2);
 
         this.running = false;
     }
@@ -85,20 +86,25 @@ class Game {
         let index = this.players.indexOf(ply); //If already in game
         if (this.players.length <= this.args.max_players && index === -1) {
             this.players.push(ply);
+            this.world.addChild(ply.entity);
         }
     }
 
     //Try not to add players after the start of the game
     addPlayer (ply) {
         this.queuePlayer(ply);
-        if (this.running) {
+        if (this.running && this.players.length <= this.args.max_players) {
             let scrapedWorld = this.world.scrapeAll();
             ply.socket.emit('world_init', scrapedWorld);
         }
     }
 
     killPlayer (ply) {
-        //TODO
+        this.world.killChild(ply.entity);
+        let index = this.players.indexOf(ply);
+        if (index > -1) {
+            this.players.splice(index, -1);
+        }
     }
 
     addWalls (walls) {
@@ -120,8 +126,8 @@ class Game {
             ply.socket.emit('world_init', scrapedWorld);
         }
 
-        //Send updates every 100ms
         let self = this;
+        //Send updates every 50ms
         let updateClients = function () {
             if (self.running) {
                 let changed = [];
@@ -131,11 +137,45 @@ class Game {
                 for (let i = 0; i < self.players.length; i++) {
                     self.players[i].socket.emit('update', changed);
                 }
+                setTimeout(updateClients, 50);
             }
-            setTimeout(updateClients, 50);
         };
         //Repeat every 100ms while running
         setTimeout(updateClients, 50);
+        //update players every 15ms
+        let updatePlayer = function () {
+            if (self.running) {
+                let plys = self.players;
+                for (let i = 0; i < plys.length; i++) {
+                    let ply = plys[i];
+
+                    let dir = {x: 0, y: 0};
+                    for (let j = 0; j < ply.keys.length; j++) {
+                        switch (ply.keys[j]) {
+                            case 'KeyW':
+                                dir = $VECTOR.add(dir, {x: 0, y: 1});
+                                break;
+                            case 'KeyS':
+                                dir = $VECTOR.add(dir, {x: 0, y: -1});
+                                break;
+                            case 'KeyA':
+                                dir = $VECTOR.add(dir, {x: -1, y: 0});
+                                break;
+                            case 'KeyD':
+                                dir = $VECTOR.add(dir, {x: 1, y: 0});
+                                break;
+                        }
+                    }
+                    dir = $VECTOR.nrm(dir);
+                    let force = $VECTOR.pro(10000, dir);
+
+                    ply.entity.forces.push(force);
+
+                }
+                setTimeout(updatePlayer, 15);
+            }
+        };
+        setTimeout(updatePlayer, 15);
     }
 
     stop () {

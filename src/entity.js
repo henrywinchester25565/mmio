@@ -8,7 +8,7 @@ console.log("Loaded: entity.js");
 const $VECTOR = require('./general').vector;
 const $BOUNDS = require('./bounds');
 const $EVENTS = require('./events.js');
-const $UUID   = require('uuid/v1');
+const $UUID   = require('uuid/v4');
 
 //BASE CLASS
 class Entity {
@@ -125,18 +125,18 @@ const $FRICTION = 0.6;
 const $GRAVITY = 9.81;
 class Physics extends Entity {
 
-    constructor (x, y, r, m, s) {
+    constructor (x, y, r, s) {
         super(x, y);
         this.radius = r || 0.5; //Dynamic entities should be circles
         this.physics = true;
 
         //Speed and Velocity
         this.velocity = {x: 0, y: 0};
-        this.maxSpeed = s || 10;
+        this.maxSpeed = s || 20;
 
         //Force and Momentum
         this.forces = [];
-        this.mass = m || 1;
+        this.mass = this.radius*this.radius*139*Math.PI*0.5;
         this.friction = this.mass * $GRAVITY * $FRICTION; //Magnitude of friction force
 
         let self = this; //Reference to entity
@@ -152,6 +152,8 @@ class Physics extends Entity {
             for (let i = 0; i < self.forces.length; i++) {
                 force = $VECTOR.add(force, self.forces[i]);
             }
+
+            //console.log('frc: ', force.x, force.y);
 
             //New velocity from force, for resistance calcs
             let vel = $VECTOR.pro(dt, $VECTOR.pro(1/self.mass, force));
@@ -170,8 +172,8 @@ class Physics extends Entity {
             }
 
             //Artificial terminal velocity for max speeds
-            /*let drag = $VECTOR.pro((-1 * ($VECTOR.mag(vel)/self.maxSpeed)), force);
-            force = $VECTOR.add(force, drag);*/
+            let drag = $VECTOR.pro((-1 * ($VECTOR.mag(vel)/self.maxSpeed)), force);
+            force = $VECTOR.add(force, drag);
 
             //Final velocity calculation
             vel = $VECTOR.pro(dt, $VECTOR.pro(1/self.mass, force));
@@ -191,37 +193,59 @@ class Physics extends Entity {
         //Handle collisions
         this.wallBounce = true;
         this.onCollide(function (entity, dt) {
-            //console.log(entity);
+
             dt = dt/1000; //into seconds
             let normal = self.bounds.getNormal(entity.bounds);
-            //console.log('pos:', self.x, self.y);
 
             //For impacts with circles
-            if (entity.physics === true) {
+            if ($VECTOR.mag(self.velocity) > 0) {
+                if (entity.physics === true) {
+                    let v = self.velocity;
+                    let angle = $VECTOR.anl(v, normal);
 
+                    //normal = $VECTOR.pro(-1, normal);
+                    if (angle > Math.PI / 2) {
+                        angle = Math.PI - angle; //Acute angle
 
+                    }
+                    else {
 
-            }
+                    }
+                    //console.log(self.id, self.x, normal, angle);
+                    let vn = $VECTOR.mag(v) * Math.cos(angle); //Velocity in direction of normal
+                    let p = vn * self.mass; //Momentum
+                    //console.log(vn, p, self.velocity);
 
-            //For things like walls
-            else { //Reflect velocity, instead of two dimensional circle collisions
-
-                let bounce = -1; //If it doesn't bounce
-                if (self.wallBounce) {bounce = -2;} //If it does
-
-                let v = self.velocity;
-                let angle = $VECTOR.anl(v, normal);
-                if (angle > Math.PI/4) {
-                    angle = Math.PI - angle; //Acute angle
+                    //normal = $VECTOR.pro(-1, normal); //Flip normal to oppose velocity
+                    let force = $VECTOR.pro(1 / dt, $VECTOR.pro(p, normal)); //Normal force
+                    entity.forces.push(force);
+                    force = $VECTOR.pro(-1, force);
+                    self.forces.push(force);
                 }
-                else {
-                    normal = $VECTOR.pro(-1, normal); //Flip normal to oppose velocity
-                }
 
-                let vn = $VECTOR.mag(v) * Math.cos(angle); //Velocity in direction of normal
-                let dv = vn * -bounce; //so velocity equal to v + -2*v
-                let force = $VECTOR.pro(self.mass/dt,$VECTOR.pro(dv, normal)); //Normal force
-                self.forces.push(force);
+                //For things like walls
+                else { //Reflect velocity, instead of two dimensional circle collisions
+                    let bounce = -2; //If it doesn't bounce
+                    if (self.wallBounce) {
+                        bounce = -2;
+                    } //If it does
+
+                    let v = self.velocity;
+                    //console.log('vec: ', v.x, v.y, normal.x, normal.y);
+                    let angle = $VECTOR.anl(v, normal);
+
+                    if (angle > Math.PI / 2) {
+                        angle = Math.PI - angle; //Acute angle
+                    }
+                    else {
+                        normal = $VECTOR.pro(-1, normal); //Flip normal to oppose velocity
+                    }
+
+                    let vn = $VECTOR.mag(v) * Math.cos(angle); //Velocity in direction of normal
+                    let dv = vn * -bounce; //so velocity equal to v + -2*v
+                    let force = $VECTOR.pro(self.mass / dt, $VECTOR.pro(dv, normal)); //Normal force
+                    self.forces.push(force);
+                }
             }
 
         });
