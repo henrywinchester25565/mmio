@@ -17,6 +17,9 @@ class Entity {
         this.x = x;
         this.y = y;
 
+        //Angle
+        this.a = 0; //Not used in all entities
+
         this.id = $UUID();
 
         this.events = new $EVENTS.handler();
@@ -25,6 +28,22 @@ class Entity {
 
         this.type = 'entity'; //Type of entity
         this.bounds = new $BOUNDS.bounds.point(this.x, this.y);
+
+        let self = this;
+        this.events.on('killed', function () {
+            self.alive = false;
+        });
+        this.alive = true;
+    }
+
+    //If its angle gets changed, mark as changed
+    set angle (angle) {
+        this.a = angle;
+        this.changed = true;
+    }
+
+    get angle () {
+        return this.a;
     }
 
     //EVENT WRAPPERS
@@ -35,6 +54,7 @@ class Entity {
 
     kill () {
         this.events.emit('killed');
+        this.alive = false; //Once finished death calls
     }
 
     //Update
@@ -61,7 +81,8 @@ class Entity {
             x: this.x,
             y: this.y,
             type: this.type,
-            id: this.id
+            id: this.id,
+            alive: this.alive
         }
     }
 
@@ -88,7 +109,8 @@ class Wall extends Entity {
             w: this.w,
             h: this.h,
             type: this.type,
-            id: this.id
+            id: this.id,
+            alive: this.alive
         }
     }
 
@@ -113,7 +135,8 @@ class Light extends Entity {
             intensity: this.intensity,
             distance: this.distance,
             type: this.type,
-            id: this.id
+            id: this.id,
+            alive: this.alive
         };
     }
 
@@ -138,6 +161,8 @@ class Physics extends Entity {
         this.forces = [];
         this.mass = this.radius*this.radius*139*Math.PI*0.5;
         this.friction = this.mass * $GRAVITY * $FRICTION; //Magnitude of friction force
+
+        this.collides = true;
 
         let self = this; //Reference to entity
         //Set changed
@@ -199,16 +224,13 @@ class Physics extends Entity {
 
             //For impacts with circles
             if ($VECTOR.mag(self.velocity) > 0) {
-                if (entity.physics === true) {
+                if (entity.bounds.type === 'circle') {
                     let v = self.velocity;
                     let angle = $VECTOR.anl(v, normal);
 
                     //normal = $VECTOR.pro(-1, normal);
                     if (angle > Math.PI / 2) {
                         angle = Math.PI - angle; //Acute angle
-
-                    }
-                    else {
 
                     }
                     //console.log(self.id, self.x, normal, angle);
@@ -224,7 +246,7 @@ class Physics extends Entity {
                 }
 
                 //For things like walls
-                else { //Reflect velocity, instead of two dimensional circle collisions
+                else if (entity.bounds.type === 'box'){ //Reflect velocity, instead of two dimensional circle collisions
                     let bounce = -2; //If it doesn't bounce
                     if (self.wallBounce) {
                         bounce = -2;
@@ -238,8 +260,10 @@ class Physics extends Entity {
                         angle = Math.PI - angle; //Acute angle
                     }
                     else {
-                        normal = $VECTOR.pro(-1, normal); //Flip normal to oppose velocity
+                        //normal = $VECTOR.pro(-1, normal); //Flip normal to oppose velocity
                     }
+
+                    //console.log(normal);
 
                     let vn = $VECTOR.mag(v) * Math.cos(angle); //Velocity in direction of normal
                     let dv = vn * -bounce; //so velocity equal to v + -2*v
@@ -258,9 +282,11 @@ class Physics extends Entity {
         return {
             x: this.x,
             y: this.y,
+            a: this.a,
             r: this.radius,
             id: this.id,
-            type: this.type
+            type: this.type,
+            alive: this.alive
         };
     }
 

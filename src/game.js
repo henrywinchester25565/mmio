@@ -16,7 +16,7 @@ const $DEFAULT_PARAMS = {
     max_entities: 50,
     max_players: 12,
     world_width: 24,
-    world_height: 24
+    world_height: 48
 };
 
 //GAME
@@ -33,36 +33,42 @@ class Game {
         let self = this;
         this.world.onUpdate(function(changed){
             //console.log('update');
-            for (let i = 0; i < changed.length; i++) {
-                if (self.changed.indexOf(changed[i]) === -1) {
-                    self.changed.push(changed[i]);
-                }
-            }
+            self.changed = changed;
         });
 
         //TEMP
         this.addWalls([
-            {x: 0, y:0, w: 1, h: 23},
             {x: 0, y: 0, w: 23, h: 1},
-            {x: 23, y: 0, w: 1, h: 23},
-            {x: 0, y: 23, w: 23, h: 1},
-            {x: 6, y: 6, w: 12, h: 1},
-            {x:6, y: 6, w: 1, h: 6}
+            {x: 0, y: 1, w: 1, h: 38},
+            {x: 0, y: 39, w: 20, h: 1},
+            {x: 19, y: 4, w: 1, h: 35},
+            {x: 1, y: 4, w: 8, h: 1},
+            {x: 9, y: 4, w: 1, h: 10},
+            {x: 4, y: 13, w: 5, h: 1},
+            {x: 13, y: 4, w: 1, h: 4},
+            {x: 14, y: 4, w: 5, h: 1},
+            {x: 13, y: 10, w: 1, h: 4},
+            {x: 14, y: 13, w: 5, h: 1},
+            {x: 20, y: 13, w: 3, h: 1},
+            {x: 23, y: 1, w: 1, h: 13},
+            {x: 14, y: 7, w: 2, h: 1},
+            {x: 4, y: 22, w: 6, h: 1},
+            {x: 9, y: 17, w: 1, h: 5},
+            {x: 1, y: 26, w: 9, h: 1},
+            {x: 10, y: 26, w: 1, h: 10},
+            {x: 1, y: 35, w: 2, h: 1},
+            {x: 6, y: 35, w: 4, h: 1},
+            {x: 11, y: 35, w: 2, h: 1},
+            {x: 16, y: 35, w: 3, h: 1}
         ]);
-        let light = new $ENTITY.ents.light(3, 3, 0xff0000, 1);
-        let light2 = new $ENTITY.ents.light(8, 10, 0xffffff, 2);
-        this.world.queueChild(light);
-        this.world.queueChild(light2);
 
-        let phys = new $ENTITY.ents.phys(12, 13, 0.6);
-        //phys.mass = 1;
-        phys.forces.push({x: 1000, y: 0});
-        this.world.queueChild(phys);
+        let l1 = new $ENTITY.ents.light(5, 30, 0x4cb6e8, 1.2, 8);
+        let l2 = new $ENTITY.ents.light(15, 22, 0xe51647, 1.8, 30);
+        let l3 = new $ENTITY.ents.light(7, 20, 0xe5cc70, 1.2, 10);
 
-        let phys2 = new $ENTITY.ents.phys(18, 12);
-        //phys2.mass = 5;
-        phys2.forces.push({x: 0, y: 0});
-        this.world.queueChild(phys2);
+        this.world.queueChild(l1);
+        this.world.queueChild(l2);
+        this.world.queueChild(l3);
 
         this.running = false;
     }
@@ -103,7 +109,7 @@ class Game {
         this.world.killChild(ply.entity);
         let index = this.players.indexOf(ply);
         if (index > -1) {
-            this.players.splice(index, -1);
+            this.players.splice(index, 1);
         }
     }
 
@@ -140,7 +146,7 @@ class Game {
                 setTimeout(updateClients, 50);
             }
         };
-        //Repeat every 100ms while running
+        //Repeat every 50ms while running
         setTimeout(updateClients, 50);
         //update players every 15ms
         let updatePlayer = function () {
@@ -149,6 +155,7 @@ class Game {
                 for (let i = 0; i < plys.length; i++) {
                     let ply = plys[i];
 
+                    //KEYS
                     let dir = {x: 0, y: 0};
                     for (let j = 0; j < ply.keys.length; j++) {
                         switch (ply.keys[j]) {
@@ -166,10 +173,21 @@ class Game {
                                 break;
                         }
                     }
-                    dir = $VECTOR.nrm(dir);
-                    let force = $VECTOR.pro(10000, dir);
+                    if (dir.x !== 0 || dir.y !== 0) {
+                        dir = $VECTOR.nrm(dir);
+                        let force = $VECTOR.pro(2000, dir);
 
-                    ply.entity.forces.push(force);
+                        ply.entity.forces.push(force);
+                    }
+
+                    //MOUSE
+                    if (ply.mouse.x !== 0 && ply.mouse.y !== 0) {
+                        let pos = {x: ply.entity.x, y: ply.entity.y};
+                        let dir = $VECTOR.add($VECTOR.pro(-1, pos), ply.mouse);
+                        dir.x = dir.x * -1; //Not sure why I have to do this
+                        //TODO figure out why I have to do above ^^^
+                        ply.entity.angle = $VECTOR.ang(dir);
+                    }
 
                 }
                 setTimeout(updatePlayer, 15);

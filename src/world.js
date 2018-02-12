@@ -116,7 +116,6 @@ class World {
         if (self.running) {
             //Keep track of which children are changed while updating
             let changed = [];
-            //console.log(tick);
             let collisions = $BOUNDS.getCollisions(self.children);
             for (let i = 0; i < collisions.length; i++) {
                 let pair = collisions[i];
@@ -128,19 +127,29 @@ class World {
             //console.log('collisions complete');
 
             for (let i = 0; i < self.children.length; i++) {
-                self.children[i].update($TIME_STEP);
+                let child = self.children[i];
                 
-                if (self.children[i].changed) { //if changed
-                    if (changed.indexOf(self.children[i] === -1)) {
-                        changed.push(self.children[i]);
+                if (child.alive) {
+                    child.update($TIME_STEP);
+                }
+                else {
+                    child.changed = true;
+                    self.removeChild(child);
+                    self.children.splice(i, 1);
+                }
+                
+                if (child.changed) { //if changed
+                    if (changed.indexOf(child === -1)) {
+                        changed.push(child);
                     }
-                    self.children[i].changed = false;
+                    child.changed = false;
                 }
             }
             self.chunkChanges(changed);
             self.events.emit('update', changed);
             setTimeout(self.update, $TIME_STEP, self);
             //console.log('update complete');
+            
         }
     }
 
@@ -174,11 +183,7 @@ class World {
     //Remove from everything
     killChild (entity) {
         entity.kill();
-        this.removeChild(entity);
-        let index = this.children.indexOf(entity);
-        if (index > -1) {
-            this.children.splice(index, 1);
-        }
+        //Dead children get picked up in update loop
     }
 
     //For new players

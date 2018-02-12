@@ -56,6 +56,7 @@ $IO.on('connection', function (socket) {
         game.start();
     }
     socket.on('disconnect', function () {
+        console.log('Disconnection: ', socket.id);
         game.killPlayer(ply);
         ply.kill();
     });

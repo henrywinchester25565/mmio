@@ -92,7 +92,7 @@ const $VECTOR_NORMALISE = function (a) {
         //in case of bad vector
         else {
             return {
-                x: 0,
+                x: -1,
                 y: 0
             }
         }

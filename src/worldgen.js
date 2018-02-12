@@ -1,178 +1,251 @@
-const $VECTOR = require('./general').$VECTOR;
+//DESC: GENERATES RANDOM WORLDS
+"use strict";
 
-//WORLD GEN ALGORITHM TESTING
-//Storing all the points in the array like this means I can change points through the
-//edge and have them change for all the edges, because the reference is to the array,
-//not the edge
-const $POINTS = [];
-const $EDGES = [];
-class Edge {
-    constructor (start, end) {
-        this.start = start;
-        this.end = end;
+//LOADED
+console.log("Loaded: worldgen.js");
+
+//REQUIREMENT
+const $WORLD = require('./world.js');
+const $ENTITY = require('./entity.js');
+const $VECTOR = require('./general.js').vector;
+
+//WORLD GEN ALGORITHM
+/*
+
+Build map with h*w matrix
+Plot path through array, dropping nodes when direction changes
+Edges should be greater than or equal to three units in length, and odd lengths
+
+Build rooms around paths by drawing rectangles around nodes in direction of path
+Stop rooms on contact with other rooms, or end of path
+
+Build node graph for AI
+
+Convert matrix to world and entities
+
+ */
+
+//DEFAULT PARAMETERS
+const $PARAMS = {
+
+    width: 147,
+    height: 147,
+    bend: 0.1,
+    length_max: 13,
+    length_min: 3,
+    branch: 0,
+    total: 120
+
+};
+
+//CHARACTERS FOR MATRIX REPRESENTATION
+const $CHARS = {
+    path: 'o',
+    void: '.',
+    node: 'X'
+};
+
+//DIRECTIONS
+const $DIRECTIONS = [
+    {x: -1, y:  0}, //0 west
+    {x:  0, y:  1}, //1 north
+    {x:  1, y:  0}, //2 east
+    {x:  0, y: -1}  //3 south
+];
+
+//WORLD GEN CLASS
+class WorldGen {
+
+    constructor (w, h, bend, min, max, branch) {
+        //this.params = $PARAMS;
+
+        this.w = w               || $PARAMS.width;
+        this.h = h               || $PARAMS.height;
+        this.bend = bend         || $PARAMS.bend;
+        this.min = min           || $PARAMS.length_min;
+        this.max = max           || $PARAMS.length_max;
+        this.branch = branch     || $PARAMS.branch;
+
+        this.createMatrix(this.w, this.h);
+        this.plotPath();
+
     }
 
-    subdivide (percentage) {
-        percentage = percentage % 1;
-        let x = Math.floor(percentage*(this.end.x - this.start.x));
-        let y = Math.floor(percentage*(this.end.y - this.start.y));
-        $POINTS.push({x: x + this.start.x, y: y + this.start.y});
-
-        let newEdge = new Edge($POINTS[$POINTS.length - 1], this.end);
-        $EDGES.push(newEdge);
-
-        this.end = $POINTS[$POINTS.length - 1];
-        return $EDGES[$EDGES.length - 1];
-    }
-
-    translate (x, y) {
-        this.start.x = this.start.x + x;
-        this.start.y = this.start.y + y;
-        console.log(this.start);
-        this.end.x = this.end.x + x;
-        this.end.y = this.end.y + y;
-        return this;
-    }
-
-    extend (x, y, percentage) {
-        //percentage = $VECTOR.mag($VECTOR.add(this.end, $VECTOR.pro(this.start, -1))) * percentage > 4 ? percentage : 0.5;
-        return this.subdivide(percentage).subdivide(0).translate(x, y);
-    }
-}
-
-//PARAMS
-const $SIZE = 25;
-const $EDGE_COMPLEXITY = 10; //2n+1
-const $GAP = '###';
-const $LINE = '   ';
-
-const $WORLD = [];
-for (let x = 0; x < $SIZE; x++) {
-    let row = [];
-    for (let y = 0; y < $SIZE; y++) {
-        row[y] = Math.floor(Math.random() * 10000);
-    }
-    $WORLD.push(row);
-}
-
-let $DISPLAY = [];
-const $INIT_DISP = function () {
-    $DISPLAY.splice(0, $SIZE);
-    for (let y = 0; y < $SIZE; y++) {
-        let row = [];
-        for (let x = 0; x < $SIZE; x++) {
-            row[x] = $GAP;
-        }
-        $DISPLAY.push(row);
-    }
-}
-
-const $UPDATE_DISPLAY = function () {
-    for (let i = 0; i < $EDGES.length; i++) {
-        let xDist = $EDGES[i].end.x - $EDGES[i].start.x;
-        let yDist = $EDGES[i].end.y - $EDGES[i].start.y;
-        let xM = yDist / xDist;
-        let yM = xDist / yDist;
-
-        let xC = 1;
-        if (xDist < 0) {xC = -1;}
-        let yC = 1;
-        if (yDist < 0) {yC = -1;}
-
-        xDist = Math.abs(xDist);
-        yDist = Math.abs(yDist);
-
-        if (xDist > 0) {
-            for (let x = 0; x <= xDist; x++) {
-                let xN = x * xC;
-                let y = Math.floor(xN * xM);
-                if ($IN_DISPLAY(xN + $EDGES[i].start.x, y + $EDGES[i].start.y)) {
-                    $DISPLAY[xN + $EDGES[i].start.x][y + $EDGES[i].start.y] = $LINE;
-                }
+    createMatrix () {
+        let w = this.w;
+        let h = this.h;
+        let matrix = [];
+        for (let x = 0; x < w; x++) {
+            matrix[x] = [];
+            for (let y = 0; y < h; y++) {
+                matrix[x][y] = $CHARS.void;
             }
         }
-        if (yDist > 0) {
-            for (let y = 0; y <= yDist; y++) {
-                let yN = y * yC;
-                let x = Math.floor(yN * yM);
-                if ($IN_DISPLAY(x + $EDGES[i].start.x, yN + $EDGES[i].start.y)) {
-                    $DISPLAY[x + $EDGES[i].start.x][yN + $EDGES[i].start.y] = $LINE;
+        this.matrix = matrix;
+    }
+
+    plotPath () {
+        //Node
+        let Node = function (point) {
+            this.x = point.x;
+            this.y = point.y;
+            this.children = [];
+        };
+
+        //For traversal
+        let tree = [];
+
+        let matrix = this.matrix;
+        
+        //Matrix properties
+        let w = matrix.length;
+        let h = matrix[0].length;
+
+        //Start on west to east
+        let dir = $DIRECTIONS[2];
+
+        //Start point, random y
+        let point = {x: 0, y: Math.floor(h * Math.random())};
+        tree.push(new Node(point));
+        matrix[point.x][point.y] = $CHARS.node;
+
+        //Current path length;
+        let length = 1;
+        let total = 1;
+
+        //When finished plotting
+        let end = false;
+        while (!end) {
+
+            let next = $VECTOR.add(point, dir);
+
+            //Hits boundary
+            if ((next.x <= -1 || next.x >= w-1 || next.y <= -1 || next.y >= h-1) && total > $PARAMS.total) {
+                console.log('escape');
+                end = true;
+            }
+            //Otherwise plot path
+            else {
+
+                point = next;
+                matrix[point.x][point.y] = $CHARS.path;
+                length++;
+                total++;
+                console.log(length);
+
+                //Change dir
+                //If meets bend req or max length, and length is odd
+                let bend = (Math.random() <= this.bend || length >= this.max) && length % 2 === 1 && length >= this.min;
+                //Or if path not clear
+                if (!this.clearAhead(matrix, point, dir) || !this.clearAhead(matrix, $VECTOR.add(point, dir), dir)) {
+                    console.log('do it anakin');
+                    bend = true;
                 }
+
+                if (bend) {
+
+                    //For debugging
+                    console.log('> BEND');
+                    this.print(matrix);
+
+                    let available = this.availableDirections(matrix, point);
+
+                    //If no available $DIRECTIONS
+                    if (available.length <= 0) {
+                        //Go back through tree to available new path
+                        while (available.length <= 0) {
+
+                            //Node in point, doesn't really matter
+                            tree.pop();
+                            if (tree.length > 0) {
+                                point = tree[tree.length - 1];
+                                available = this.availableDirections(matrix, point);
+                            }
+                            else {
+                                console.log('no more');
+                                end = true;
+                            }
+
+                        }
+                    }
+                    //Set new direction
+                    //-0.0001 so that can't be out of bounds
+                    let newDir = available[Math.floor(Math.random()*(available.length - 0.0001))];
+                    if (dir !== newDir) {
+                        length = 1; //Include start of new bend
+                        dir = newDir;
+
+                        //Add point of direction change to tree
+                        let node = new Node (point);
+                        matrix[point.x][point.y] = $CHARS.node;
+                        tree[tree.length-1].children.push(node);
+                        tree.push(node);
+                    }
+
+                }
+
+            }
+
+        }
+
+        //For debugging
+        console.log('> FINISHED');
+        this.print(matrix);
+        console.log(tree);
+        this.matrix = matrix;
+    }
+
+    clearAhead (matrix, point, dir) {
+        let w = matrix.length;
+        let h = matrix[0].length;
+
+        let clear = true;
+
+        //Check one unit ahead
+        let ahead = $VECTOR.add(dir, point);
+
+        //Doesn't hit boundary
+        if (!(ahead.x <= -1 || ahead.x >= w-1 || ahead.y <= -1 || ahead.y >= h-1)) {
+            //Hits path
+            if (matrix[ahead.x][ahead.y] !== $CHARS.void) {
+                clear = false;
             }
         }
-    }
-    for (let i = 0; i < $POINTS.length; i++) {
-        $DISPLAY[$POINTS[i].x][$POINTS[i].y] = ' x ';
-    }
-}
 
-const $IN_DISPLAY = function (x, y) {
-    return x >= 0 && x < $SIZE && y >= 0 && y < $SIZE;
-}
-
-const $PRINT = function () {
-    console.info(' --- DISPLAY --- ');
-    let border = '';
-    for (let i = 0; i < $SIZE+2; i++) {
-        border = border.concat('###');
+        return clear;
     }
-    //console.log(border);
-    for (let y = 0; y < $SIZE; y++) {
-        let disp = '';
-        for (let x = 0; x < $SIZE; x++) {
-            disp = disp.concat($DISPLAY[x][y]);
+    
+    availableDirections (matrix, point) {
+        //Get available $DIRECTIONS
+        let available = [];
+        for (let i = 0; i < $DIRECTIONS.length; i++) {
+
+            //If no path in two spaces ahead
+            if (this.clearAhead(matrix, point, $DIRECTIONS[i]) && this.clearAhead(matrix, $VECTOR.add(point, $DIRECTIONS[i]), $DIRECTIONS[i])) {
+                //Add direction to available $DIRECTIONS
+                available.push($DIRECTIONS[i]);
+            }
+
         }
-        console.log(disp);
+        return available;
     }
-    //console.log(border);
+
+    //For debugging
+    print (matrix) {
+        let w = matrix.length;
+        let h = matrix[0].length;
+        //Need to flip x and y so not printed rotated
+        for (let y = 0; y < h; y++) {
+            let row = '';
+            for (let x = 0; x < w; x++) {
+                row = row.concat(matrix[x][y]);
+            }
+            console.log(row);
+        }
+        console.log('');
+    }
+
 }
 
-let start = {x: 0, y: Math.floor($SIZE - 4)};
-let end = {x: $SIZE - 1, y: Math.floor($SIZE - 4)}
-$POINTS.push(start, end);
-
-$EDGES.push(new Edge($POINTS[0], $POINTS[1]));
-
-/*$EDGES[0].extend(0, -10, 0.5);
-
-$EDGES[1].extend(-4, 0, 0.7);
-console.log($EDGES);
-
-$INIT_DISP();
-$UPDATE_DISPLAY()
-$PRINT();*/
-
-let edges = 0;
-while (edges < $EDGE_COMPLEXITY) {
-    $INIT_DISP();
-    $UPDATE_DISPLAY()
-    $PRINT();
-
-    let index = Math.floor(Math.random() * $EDGES.length);
-    if (index >= $EDGES.length) {index = $EDGES.length - 1}
-    //console.log(index, $EDGES.length);
-    let edge = $EDGES[index];
-
-    let s = Math.random() > 0.5 ? 1 : -1;//Sign, for direction
-    let a = 0;
-    let b = 0;
-    if (Math.abs(edge.end.x - edge.start.x) > 0) {
-        let dis = s > 0 ? $SIZE - edge.start.y : edge.start.y;
-        b = Math.floor(Math.random() * dis * s);
-        b = Math.abs(b) > 2 ? b : 3 * s;
-    }
-    else {
-        let dis = s > 0 ? $SIZE - edge.start.x : edge.start.x;
-        a = Math.floor(Math.random() * dis * s);
-        a = Math.abs(a) > 2 ? a : 3 * s;
-    }
-    console.log('edge: ', edge, 'a: ', a, 'b: ', b);
-    console.log('exte: ', edge.extend(a, b, 0.5));
-    console.log('edge: ', edge);
-    console.log($POINTS);
-    edges++;
-}
-
-$INIT_DISP();
-$UPDATE_DISPLAY();
-$PRINT();
+//EXPORTS
+module.exports = WorldGen;
