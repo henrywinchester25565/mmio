@@ -28,21 +28,19 @@ class Point {
     update (x, y) {
         this.xMin = x;
         this.xMax = x;
-        this.yMin = y;
+        this.yMin = y; //TODO remove max and min from all bounds, and replace with get/set functions
         this.yMax = y;
     }
 
     //For another point
     inBoundsPoint (point, normal) {
-
         if (normal === true) {
-            //TODO
+            let dir = {x: point.xMin - this.xMin, y: point.yMin - this.yMin};
+            return $VECTOR.nrm(dir);
         }
 
         return this.xMin === point.xMin && this.yMin === point.yMin;
     }
-
-    //TODO For a line
 
     //For a box
     inBoundsBox (bounds, normal) {
@@ -50,18 +48,22 @@ class Point {
         let y = this.yMin;
 
         if (normal === true) {
-            //TODO
+            //Use circle check - it gives vector to closest point to box from point
+            let dx = x - Math.max(bounds.xMin, Math.min(x, bounds.xMax));
+            let dy = y - Math.max(bounds.yMin, Math.min(y, bounds.yMax));
+            return $VECTOR.nrm({x: -dx, y: -dy});
         }
 
         return (x >= bounds.xMin && x <= bounds.xMax) && (y >= bounds.yMin && y <= bounds.yMax);
     }
     
     inBoundsCircle (bounds, normal) {
-        let dx = this.xMin - bounds.x;
-        let dy = this.yMin - bounds.y;
+        let dx = bounds.x - this.xMin;
+        let dy = bounds.y - this.yMin;
 
         if (normal === true) {
-            //TODO
+            let dir = {x: dx, y: dy};
+            return $VECTOR.nrm(dir);
         }
 
         return (dx*dx + dy*dy) <= (bounds.radius*bounds.radius);
@@ -78,6 +80,7 @@ class Point {
 }
 
 //LINES
+//TODO code line bounds
 class Line {
 
     constructor () {
