@@ -11,6 +11,7 @@ const $EVENTS = require('./events.js');
 const $UUID   = require('uuid/v4');
 
 //BASE CLASS
+//Entity base class
 class Entity {
 
     constructor (x, y) {
@@ -88,6 +89,8 @@ class Entity {
 
 }
 
+//WALL
+//For static, immovable rectangular objects
 class Wall extends Entity {
 
     constructor (x, y, w, h) {
@@ -116,6 +119,8 @@ class Wall extends Entity {
 
 }
 
+//LIGHT
+//For (typically) static lights
 class Light extends Entity {
 
     constructor (x, y, color, intensity, distance) {
@@ -147,12 +152,12 @@ class Light extends Entity {
 const $FRICTION  = 0.6; //Very high coefficient of friction
 const $GRAVITY   = 9.81; //Acceleration due to gravity ms^-2
 const $AIR       = 1.225; //Mass density of air kgm^3
+//Inherits point bounds
+//Classes using physics should inherit from this, and modify bounds
 class Physics extends Entity {
 
-    constructor (x, y, r, d) {
+    constructor (x, y) {
         super(x, y);
-        //TODO change to point
-        this.radius = r || 0.5;
         this.physics = true;
 
         //Velocity
@@ -160,14 +165,13 @@ class Physics extends Entity {
 
         //Force and Momentum
         this.forces = [];
-        this.mass = this.radius*this.radius*139*Math.PI*0.5;
+        this.mass = 100;
 
         //Friction
         this.friction = this.mass * $GRAVITY * $FRICTION; //Magnitude of normal force
 
         //Drag
-        this.depth = d || 0.2;
-        this.area = this.depth * this.radius; //Cross sectional area
+        this.area = 0.1; //Cross sectional area, should be 0 but required for drag
         this.drag = 1.2; //Drag coefficient of a standing man
 
         //Physics collisions
@@ -177,6 +181,7 @@ class Physics extends Entity {
         let self = this; //Reference to entity
         //Set changed
         //Physics calcs when updated
+        //TODO remove function from constructor and use call function on below instead
         this.onUpdate(function (dt) {
 
             //dt in ms, so convert to s
@@ -297,7 +302,7 @@ class Physics extends Entity {
             //As such, this is used to obtain the relevant collision information.
 
             //The collides property used to determine if used in physics collisions
-            if (entity.collides) {
+            if (entity.collides && self.collides) {
                 //Normal away from self
                 let normal = self.bounds.getNormal(entity.bounds);
 
@@ -320,7 +325,40 @@ class Physics extends Entity {
         });
 
         this.type = 'phys';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            a: this.a,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+//PLAYER CLASS
+class Player extends Physics {
+
+    constructor (x, y, r) {
+        super(x, y);
+        this.radius = r || 0.4;
+
+        //A player with radius 0.4 is considered average,
+        //So is given the average mass of an adult male.
+        //The constant used allows for scaling.
+        this.mass = this.radius * this.radius * Math.PI * 149;
+
+        //Area for drag
+        this.area = this.radius * this.radius; //Assume in cube
+
+        //Circle bounds
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
+
+        this.type = 'player';
     }
 
     scrape () {
@@ -332,7 +370,7 @@ class Physics extends Entity {
             id: this.id,
             type: this.type,
             alive: this.alive
-        };
+        }
     }
 
 }
@@ -342,7 +380,8 @@ const $ENTITIES = {
     entity: Entity,
     wall: Wall,
     light: Light,
-    phys: Physics
+    phys: Physics,
+    ply: Player
 };
 
 //CHECK IF ENTITY
