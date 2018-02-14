@@ -1,6 +1,8 @@
 //DESC: HANDLES ALL TOP-LEVEL Server-Side GAMEPLAY ELEMENTS
 'use strict';
 
+console.log('');
+
 //NOTES
 //Files should start with an all caps DESC: comment explaining the files purpose.
 //CAPS - Used for comments being used as headers
@@ -43,18 +45,26 @@ $APP.get('/', function(req, res){
     res.sendFile($ROOT + 'public/html/index.html');
 });
 
+/*________________________________________________________*/
+
 //GAME
+//REQUIREMENTS
+
+
 const $GAME = require('./game.js');
 const $PLAYER = require('./player.js');
+
+console.log('');//Break in console
+
 const game = new $GAME();
+game.start();
+
+console.log('');
 
 $IO.on('connection', function (socket) {
     console.log('Connection: ' + socket.id);
     let ply = new $PLAYER.player(socket, $PLAYER.classes.default);
     game.addPlayer(ply);
-    if (!game.running) {
-        game.start();
-    }
     socket.on('disconnect', function () {
         console.log('Disconnection: ', socket.id);
         game.killPlayer(ply);
