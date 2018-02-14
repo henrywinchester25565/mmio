@@ -69,7 +69,6 @@ class Player {
         $PLAYERS[socket.id] = this;
         this.entity = new $ENTITY.ents.phys(2,2);
         this.entity.wallBounce = false;
-        this.entity.friction = this.entity.mass*9.81*2;
 
         this.socket.emit('ply', this.entity.scrape());
     }
