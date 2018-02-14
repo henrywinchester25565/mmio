@@ -184,7 +184,7 @@ class Circle {
         let dx = this.x - Math.max(box.xMin, Math.min(this.x, box.xMax)); //d for distance
         let dy = this.y - Math.max(box.yMin, Math.min(this.y, box.yMax));
         if (normal === true) {
-            return $VECTOR.nrm({x: dx, y: dy});
+            return $VECTOR.nrm({x: -dx, y: -dy}); //-ve so normal is away from bounds
         }
         return (dx*dx + dy*dy) <= (this.radius*this.radius);
     }
