@@ -608,7 +608,7 @@ class Camera {
 class World {
 
     static get cameraHeight () {
-        return 30;
+        return 40;
     }
 
     static get fov () {
