@@ -124,8 +124,6 @@ class World {
                 pair[1].collide(pair[0], $TIME_STEP);
             }
 
-            //console.log('collisions complete');
-
             for (let i = 0; i < self.children.length; i++) {
                 let child = self.children[i];
                 
@@ -148,7 +146,6 @@ class World {
             self.chunkChanges(changed);
             self.events.emit('update', changed);
             setTimeout(self.update, $TIME_STEP, self);
-            //console.log('update complete');
             
         }
     }
