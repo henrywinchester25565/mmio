@@ -67,8 +67,7 @@ class Player {
         this.xp = 0;
 
         $PLAYERS[socket.id] = this;
-        this.entity = new $ENTITY.ents.phys(2,2);
-        this.entity.wallBounce = false;
+        this.entity = new $ENTITY.ents.ply(2,2);
 
         this.socket.emit('ply', this.entity.scrape());
     }
