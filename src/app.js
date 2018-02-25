@@ -50,7 +50,6 @@ $APP.get('/', function(req, res){
 //GAME
 //REQUIREMENTS
 
-
 const $GAME = require('./game.js');
 const $PLAYER = require('./player.js');
 
