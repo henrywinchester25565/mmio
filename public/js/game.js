@@ -127,7 +127,7 @@ function loadAssets () {
 
     //Load queued assets and create references
     for (let i = 0; i < assetQueue.length; i++) {
-        let asset = assetQueue.pop();
+        let asset = assetQueue[i];
         //Load asset and create reference
         switch (asset.type) {
             case 'obj':
@@ -251,8 +251,8 @@ class Light extends Entity {
     constructor (id, x, y, intensity, color, distance) {
         super(id, x, y);
 
-        this.z = 1.2;
-        this.intensity = intensity || 1;
+        this.z = 4;
+        this.intensity = intensity || 0.4;
         this.color = color         || 0xffffff;
         this.distance = distance   || 20;
     }
@@ -283,7 +283,7 @@ class Wall extends Entity {
 
     //Wall height (along z-axis)
     static get height () {
-        return 1.4;
+        return 4;
     }
 
     static get material () {
@@ -388,28 +388,18 @@ class Dynamic extends Entity {
 entities[Dynamic.type] = Dynamic;
 
 //PHYSICS
+//For representation of physics base class
 class Physics extends Dynamic {
 
     static get type () {
         return 'phys';
     }
 
-    static get height () {
-        return 0.1;
-    }
-
-    constructor (id, x, y, r, angle) {
-        super (id, x, y, angle);
-        this.r = r;
+    constructor (id, x, y, a) {
+        super (id, x, y, a);
     }
 
     init () {
-        let geo = new THREE.CylinderBufferGeometry(this.r, this.r, Physics.height, 12);
-        geo.rotateX(Math.PI/2);
-        let mat = materials['default'];
-        let mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(0, 0, Physics.height/2);
-
         let light = new THREE.PointLight(0x3C98EB, 3, 8, 2);
         light.shadow.mapSize.width = 1024;
         light.shadow.mapSize.height = 1024;
@@ -418,7 +408,6 @@ class Physics extends Dynamic {
 
         let obj = new THREE.Group();
         obj.add(light);
-        obj.add(mesh);
         obj.position.set(this.x, this.y, 0);
 
         this.obj = obj;
@@ -426,7 +415,7 @@ class Physics extends Dynamic {
     }
 
     static fromScrape (scrape) {
-        return new Physics(scrape.id, scrape.x, scrape.y, scrape.r, scrape.a);
+        return new Physics(scrape.id, scrape.x, scrape.y, scrape.a);
     }
 
 }
@@ -440,30 +429,48 @@ const plyClasses = {
         stats: {
             health: 100,
             stamina: 100,
-            manna: 100
+            ammo: 3
         }
     }
 };
 
-//PLAYER BASE CLASS
+//PLAYER TOKEN CLASS
 class Player extends Dynamic {
 
     static get type () {
         return 'player';
     }
 
-    constructor (id, x, y, angle, classType, stats) {
-        super(id, x, y, angle);
+    constructor (id, x, y, a, r) {
+        super(id, x, y, a);
 
-        this.plyClass = Object.create(plyClasses[classType]);
-        this.health = stats.health || this.plyClass.stats.health;
-        this.stamina = stats.stamina || this.plyClass.stats.stamina;
-        this.manna = stats.manna || this.plyClass.stats.manna;
-        this.asset = this.plyClass.asset;
+        this.radius = r;
+    }
+
+    //Temp
+    init () {
+        let group = new THREE.Group();
+
+        let light = new THREE.PointLight(0xd2d2ff, 1, 8, 2);
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
+        light.castShadow = true;
+        light.position.z = 4;
+        group.add(light);
+
+        let char = objects['mage'].clone();
+        char.rotation.x = Math.PI/2;
+        char.rotation.y = Math.PI;
+        char.scale.set(3, 3, 3);
+        group.add(char);
+
+        group.position.set(this.x, this.y, 0);
+        this.obj = group;
+        return group;
     }
 
     static fromScrape (scrape) {
-        return new Player(scrape.id, scrape.x, scrape.y, scrape.a, scrape.classType, scrape.stats)
+        return new Player(scrape.id, scrape.x, scrape.y, scrape.a, scrape.r)
     }
 
 }
@@ -608,11 +615,11 @@ class Camera {
 class World {
 
     static get cameraHeight () {
-        return 40;
+        return 10;
     }
 
     static get fov () {
-        return 30;
+        return 75;
     }
 
     constructor (w, h) {
@@ -641,15 +648,15 @@ class World {
 
         //ZOOM TRACKING
         window.addEventListener('wheel', function (event) {
-            let dy = event.deltaY / 20;
+            let dy = event.deltaY / 100;
             self.camera.z = self.camera.z + dy;
             console.log(dy);
             //Clip
-            if (self.camera.z < 20) {
-                self.camera.z = 20;
+            if (self.camera.z < 7) {
+                self.camera.z = 7;
             }
-            else if (self.camera.z > 100) {
-                self.camera.z = 100;
+            else if (self.camera.z > 20) {
+                self.camera.z = 20;
             }
 
         }, false);
@@ -904,13 +911,18 @@ assetQueue.push({
 });
 assetQueue.push({
     type: 'tex',
+    location: 'textures/floor_roughness.png',
+    name: 'floor_roughness'
+});
+assetQueue.push({
+    type: 'tex',
     location: 'textures/floor_normal.png',
     name: 'floor_normal'
 });
 assetQueue.push({
-    type: 'tex',
-    location: 'textures/floor_roughness.png',
-    name: 'floor_roughness'
+    type: 'obj',
+    location: 'models/mage.json',
+    name: 'mage'
 });
 
 loadAssets();
