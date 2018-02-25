@@ -305,7 +305,6 @@ const $COLLISIONS = function (entities, specific) {
 
     }
 
-
     return collisions;
 
 };
