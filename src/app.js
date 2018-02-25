@@ -45,7 +45,7 @@ $APP.get('/', function(req, res){
     res.sendFile($ROOT + 'public/html/index.html');
 });
 
-/*________________________________________________________*/
+////////////////////////////////////////////////////
 
 //GAME
 //REQUIREMENTS

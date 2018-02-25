@@ -345,7 +345,7 @@ class Player extends Physics {
 
     constructor (x, y, r) {
         super(x, y);
-        this.radius = r || 0.4;
+        this.radius = r || 0.3 * 3;
 
         //A player with radius 0.4 is considered average,
         //So is given the average mass of an adult male.

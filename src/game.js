@@ -62,13 +62,11 @@ class Game {
             {x: 16, y: 35, w: 3, h: 1}
         ]);
 
-        let l1 = new $ENTITY.ents.light(5, 30, 0x4cb6e8, 1.2, 8);
-        let l2 = new $ENTITY.ents.light(15, 22, 0xe51647, 1.8, 30);
-        let l3 = new $ENTITY.ents.light(7, 20, 0xe5cc70, 1.2, 10);
+        let l1 = new $ENTITY.ents.light(5, 30, 0x4cb6e8, 1, 8);
+        let l2 = new $ENTITY.ents.light(15, 22, 0xe51647, 1, 30);
 
         this.world.queueChild(l1);
         this.world.queueChild(l2);
-        this.world.queueChild(l3);
 
         this.running = false;
     }
@@ -175,7 +173,7 @@ class Game {
                     }
                     if (dir.x !== 0 || dir.y !== 0) {
                         dir = $VECTOR.nrm(dir);
-                        let force = $VECTOR.pro(2000, dir);
+                        let force = $VECTOR.pro(2000*3, dir);
 
                         ply.entity.forces.push(force);
                     }
