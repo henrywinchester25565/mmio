@@ -361,6 +361,156 @@ class WorldGen {
         }
     }
 
+    //Tests to see if wall is end of wall (maximum of one wall besides it)
+    //And returns the directions of the neighbouring wall, (0,0 if has none) or undefined
+    endDir (pos) {
+        let dir;
+        for (let d in $DIR) {
+            if ($DIR.hasOwnProperty(d)) {
+
+                let spc = $VECTOR.add($DIR[d], pos);
+                if (this.canvas.inCanvas(spc)) {
+                    if (this.canvas.canvas[spc.x][spc.y] === $PAINT.wall) {
+
+                        //Set dir to directions if wall
+                        if (dir === undefined) {
+                            dir = $DIR[d];
+                        }
+                        else {
+                            return; //Return undefined
+                        }
+
+                    }
+                 }
+
+            }
+        }
+        dir = dir || {x: 0, y: 0};
+        return dir;
+    }
+
+    //Tests to see if wall is an edge/corner
+    isEdge (pos, dir) {
+        //Get sides of
+        let sides = [];
+        for (let d in $DIR) {
+            if ($DIR.hasOwnProperty(d)) {
+                if ($VECTOR.dot($DIR[d], dir) === 0) {
+                    sides.push($DIR[d]);
+                }
+            }
+        }
+
+        //Check sides for edge/corner
+        for (let i = 0; i < sides.length; i++) {
+            let side = $VECTOR.add(pos, sides[i]);
+            //If corner or edge
+            if (this.canvas.inCanvas(side)) {
+                if (this.canvas.canvas[side.x][side.y] === $PAINT.wall) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    pushLine (pos, dir) {
+        while (true) {
+            //Test ahead
+            let next = $VECTOR.add(dir, pos);
+            if (this.canvas.inCanvas(next)) {
+                //If reaches end of wall
+                if (this.canvas.canvas[next.x][next.y] !== $PAINT.wall) {
+                    return pos;
+                }
+            }
+            //Reaches end of map
+            else {
+                return pos;
+            }
+
+            //Test for corner/edge
+            let sides = this.isEdge(pos, dir);
+            if (sides) {
+                return pos;
+            }
+
+            //At this point, next is standalone wall, not at corner or edge
+            //Or out of map
+            this.canvas.canvas[pos.x][pos.y] = $PAINT.void; //Delete wall
+            pos = next;
+        }
+    }
+
+    //Tests if there is a corridor from pos in direction d, with width r
+    isCorridor (pos, dir, r) {
+        //Tests pos is actually a wall
+        if (this.canvas.inCanvas(pos)) {
+            if (this.canvas.canvas[pos.x][pos.y] !== $PAINT.wall) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+
+        //Test next r spaces are path
+        let next = pos;
+        for (let i = 0; i < (r*2)+1; i++) {
+            next = $VECTOR.add(next, dir);
+            //If not in canvas
+            if (this.canvas.inCanvas(next)) {
+                //If not path
+                if (this.canvas.canvas[next.x][next.y] !== $PAINT.path) {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+
+        //One wall then three path, now one wall
+        next = $VECTOR.add(next, dir);
+        if (this.canvas.inCanvas(next)) {
+            //Last space is wall
+            if (this.canvas.canvas[next.x][next.y] === $PAINT.wall) {
+                return true;
+            }
+        }
+        else {
+            return false;
+        }
+        //Last space isn't wall, but is in canvas
+        return false;
+    }
+
+    wallLength (pos) {
+        if (this.canvas.inCanvas(pos)) {
+
+            let length = 0;
+
+            let dir = this.endDir(pos);
+            if (this.canvas.canvas[pos.x][pos.y] === $PAINT.wall && dir !== undefined) {
+                //If wall only one unit by one unit
+                if (dir === {x: 0, y:0}) {
+                    return 1;
+                }
+
+                //Move along wall and increment length
+                while (this.canvas.inCanvas(pos)) {
+
+                    if (this.canvas.canvas[pos.x][pos.y] === $PAINT.wall) {
+
+                    }
+
+                }
+
+            }
+        }
+    }
+
     generate () {
         console.log('>> World generating...');
 
@@ -537,10 +687,100 @@ class WorldGen {
             this.canvas.line(c, a, $PAINT.wall, 0, $PAINT.path);
         }
 
-        //TODO Push and Pull walls
+        //TODO Patch and Pull walls
+        //Patch gaps between walls and walls/paths  for sizes smaller than 4 spaces
         //Walls causing corridors get pushed
-        //Walls with void in their direction get pulled
         //Fill in empty space where there is no path
+
+        this.canvas.print();
+
+        //Get directions to operate in
+        let directions = [];
+        for (let d in $DIR) {
+            if ($DIR.hasOwnProperty(d)) {
+                directions.push($DIR[d]);
+            }
+        }
+
+        //Length at which to patch
+        let threshold = 4;
+
+        //PUSH
+        //Go across canvas in each direction and push where corridors
+        for (let i = 0; i < directions.length; i++) {
+            dir = directions[i];
+            pos = {};
+            pos.x = dir.x !== 0 ? (this.w + dir.x) % (this.w + 1) : 0; //Starts at either end based on direction
+            pos.y = dir.y !== 0 ? (this.h + dir.y) % (this.h + 1) : 0;
+            
+            let sideDir = dir.y === 0 ? {x: 0, y: 1} : {x: 1, y: 0}; //If direction is to right, move down
+            while (this.canvas.inCanvas(pos)) {
+                //Update next represents going down the canvas
+                //Pos is going along
+                let next = pos;
+                while (this.canvas.inCanvas(next)) {
+                    if (this.canvas.canvas[next.x][next.y] === $PAINT.wall) {
+                        let wallDir = this.endDir(next);
+                        //If wall is end of wall
+                        if (wallDir !== undefined) {
+                            //TODO push lines less than five units long
+                            if ($VECTOR.dot(wallDir, dir) === 0 && this.isCorridor(next, dir, r)) {
+
+                                //Push wall down
+                                this.pushLine(next, wallDir);
+
+                            }
+                        }
+                    }
+                    next = $VECTOR.add(next, dir);
+                }
+                pos = $VECTOR.add(pos, sideDir);
+            }
+        }
+
+        this.canvas.print();
+
+        //PATCH
+        for (let i = 0; i < directions.length; i++) {
+            dir = directions[i];
+            pos = {};
+            pos.x = dir.x !== 0 ? (this.w + dir.x) % (this.w + 1) : 0; //Starts at either end based on direction
+            pos.y = dir.y !== 0 ? (this.h + dir.y) % (this.h + 1) : 0;
+
+            let sideDir = dir.y === 0 ? {x: 0, y: 1} : {x: 1, y: 0}; //If direction is to right, move down
+            while (this.canvas.inCanvas(pos)) {
+                let next = pos;
+                let lastWall;
+                let length = 0;
+                while (this.canvas.inCanvas(next)) {
+
+                    //Add to length of gap if void between walls
+                    if (this.canvas.canvas[next.x][next.y] === $PAINT.void) {
+                        if (lastWall !== undefined) {
+                            length++;
+                        }
+                    }
+                    else {
+                        //If at wall
+                        if (this.canvas.canvas[next.x][next.y] === $PAINT.wall) {
+
+                            if (length > 0 && length <= threshold && lastWall !== undefined) {
+                                this.canvas.line(lastWall, next, $PAINT.wall, 0)
+                            }
+                            lastWall = next;
+                        }
+                        else { //Not at wall, not at void, must be path
+                            lastWall = undefined;
+                        }
+
+                        //Restart length if no longer gap
+                        length = 0;
+                    }
+                    next = $VECTOR.add(next, dir);
+                }
+                pos = $VECTOR.add(pos, sideDir);
+            }
+        }
 
         //Print with walls
         console.log('### WITH WALLS ###');
