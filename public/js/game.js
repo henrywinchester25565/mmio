@@ -892,17 +892,17 @@ manager.onLoad = init;
 //ASSETS
 assetQueue.push({
     type: 'tex',
-    location: 'textures/Floor_diffuse.png',
+    location: 'textures/floor_diffuse.png',
     name: 'floor_base'
 });
 assetQueue.push({
     type: 'tex',
-    location: 'textures/Floor_specular.png',
+    location: 'textures/floor_specular.png',
     name: 'floor_specular'
 });
 assetQueue.push({
     type: 'tex',
-    location: 'textures/Floor_normal.png',
+    location: 'textures/floor_normal.png',
     name: 'floor_normal'
 });
 assetQueue.push({
