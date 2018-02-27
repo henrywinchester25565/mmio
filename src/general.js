@@ -12,13 +12,10 @@ const $VECTOR_IS = function (a) {
 
 //Add components
 const $VECTOR_ADD = function (a, b) {
-    if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
         return {
             x: a.x + b.x,
             y: a.y + b.y
         };
-    }
-    else {return null}
 };
 
 //By scalar
@@ -36,41 +33,29 @@ const $VECTOR_MULTIPLY = function (a, b) {
 
 //Dot product, for angle between vectors
 const $VECTOR_DOT = function (a, b) {
-    if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
-        return a.x * b.x + a.y * b.y ; //Dot product
-    }
-    else {return null}
+    return a.x * b.x + a.y * b.y ; //Dot product
 };
 
 //With x, y to origin
 const $VECTOR_MAGNITUDE = function (a) {
-    if ($VECTOR_IS(a)) {
-        return Math.sqrt(a.x * a.x + a.y * a.y); //Pythagoras
-    }
-    else {return null}
+    return Math.sqrt(a.x * a.x + a.y * a.y); //Pythagoras
 };
 
 // -- Test in degrees, work in radians --
 //Angle between two vectors
 const $VECTOR_ANGLE_LOCAL = function (a, b) {
-    if ($VECTOR_IS(a) && $VECTOR_IS(b)) {
-        let div = $VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b);
-        if (div === 0) {return null}
-        let cosine = $VECTOR_DOT(a, b) / ($VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b));
-        return Math.acos(cosine);
-    }
-    else {return null}
+    let div = $VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b);
+    if (div === 0) {return null}
+    let cosine = $VECTOR_DOT(a, b) / ($VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b));
+    return Math.acos(cosine);
 };
 
 //Between vector and y axis, with vector direction considered
 const $VECTOR_ANGLE_GLOBAL = function (a) {
-    if ($VECTOR_IS(a)) {
-        let b = {x: 0, y: 1};
-        let angle = $VECTOR_ANGLE_LOCAL(a, b);
-        if (a.x < 0) {angle = Math.PI * 2 - angle}
-        return angle;
-    }
-    else {return null}
+    let b = {x: 0, y: 1};
+    let angle = $VECTOR_ANGLE_LOCAL(a, b);
+    if (a.x < 0) {angle = Math.PI * 2 - angle}
+    return angle;
 };
 
 const $VECTOR_FROM_DIR = function (scalar, direction) {
@@ -81,33 +66,27 @@ const $VECTOR_FROM_DIR = function (scalar, direction) {
 };
 
 const $VECTOR_NORMALISE = function (a) {
-    if ($VECTOR_IS(a)) {
-        let mag = $VECTOR_MAGNITUDE(a);
-        if (mag > 0) {
-            return {
-                x: a.x / mag,
-                y: a.y / mag
-            }
-        }
-        //in case of bad vector
-        else {
-            return {
-                x: -1,
-                y: 0
-            }
+    let mag = $VECTOR_MAGNITUDE(a);
+    if (mag > 0) {
+        return {
+            x: a.x / mag,
+            y: a.y / mag
         }
     }
-    else {return null;}
+    //in case of bad vector
+    else {
+        return {
+            x: -1,
+            y: 0
+        }
+    }
 };
 
 const $VECTOR_CLONE = function (a) {
-    if ($VECTOR_IS(a)) {
-        return {
-            x: a.x,
-            y: a.y
-        }
+    return {
+        x: a.x,
+        y: a.y
     }
-    else {return null;}
 };
 
 //ALL VECTOR OPERATIONS
