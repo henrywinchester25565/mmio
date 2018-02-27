@@ -500,18 +500,18 @@ class Floor {
         let geo = new THREE.PlaneBufferGeometry(this.w, this.h);
 
         //Material
-        let material = new THREE.MeshStandardMaterial();
-        material.receiveShadow = true;
+        let material = new THREE.MeshPhongMaterial({specular: 0x222222});
+        //material.receiveShadow = true;
 
         let base = textures['floor_base'];
         let normal = textures['floor_normal'];
-        let roughness = textures['floor_roughness'];
+        let specular = textures['floor_specular'];
 
         //Base
         if (base !== undefined) {
             base.wrapS = THREE.RepeatWrapping;
             base.wrapT = THREE.RepeatWrapping;
-            base.repeat.set( this.w/4, this.h/4);
+            base.repeat.set( this.w/3, this.h/3);
             material.map = base;
         }
 
@@ -519,17 +519,17 @@ class Floor {
         if (normal !== undefined) {
             normal.wrapS = THREE.RepeatWrapping;
             normal.wrapT = THREE.RepeatWrapping;
-            normal.repeat.set( this.w/4, this.h/4);
+            normal.repeat.set( this.w/3, this.h/3);
             material.normalMap = normal;
-            material.normalScale.set(0.2, 0.2);
+            material.normalScale.set(1.2, 1.2);
         }
 
         //Roughness
-        if (roughness !== undefined) {
-            roughness.wrapS = THREE.RepeatWrapping;
-            roughness.wrapT = THREE.RepeatWrapping;
-            roughness.repeat.set( this.w/4, this.h/4);
-            material.roughnessMap = roughness;
+        if (specular !== undefined) {
+            specular.wrapS = THREE.RepeatWrapping;
+            specular.wrapT = THREE.RepeatWrapping;
+            specular.repeat.set( this.w/3, this.h/3);
+            material.specularMap = specular;
         }
 
 
@@ -564,19 +564,6 @@ class Camera {
         this.camera = new THREE.PerspectiveCamera(fov, this.width/this.height, 0.1, 1000);
         this.update();
 
-        //For effects
-        /*
-        this.composer = new THREE.EffectComposer(this.renderer);
-        this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
-
-        //Antialias pass
-        let fxaa = new THREE.ShaderPass(THREE.FXAAShader);
-        fxaa.uniforms.resolution.value.x = 1/this.width;
-        fxaa.uniforms.resolution.value.y = 1/this.height;
-        fxaa.rendererToScreen = true;
-        this.composer.addPass(fxaa);
-        */
-
         //When the window is resized...
         let self = this;
         window.addEventListener('resize', function () {
@@ -587,7 +574,6 @@ class Camera {
             self.camera.updateProjectionMatrix();
 
             self.renderer.setSize(self.width, self.height);
-            //self.composer.setSize(self.width, self.height);
         }, false);
 
     }
@@ -906,17 +892,17 @@ manager.onLoad = init;
 //ASSETS
 assetQueue.push({
     type: 'tex',
-    location: 'textures/floor_base.png',
+    location: 'textures/Floor_diffuse.png',
     name: 'floor_base'
 });
 assetQueue.push({
     type: 'tex',
-    location: 'textures/floor_roughness.png',
-    name: 'floor_roughness'
+    location: 'textures/Floor_specular.png',
+    name: 'floor_specular'
 });
 assetQueue.push({
     type: 'tex',
-    location: 'textures/floor_normal.png',
+    location: 'textures/Floor_normal.png',
     name: 'floor_normal'
 });
 assetQueue.push({
