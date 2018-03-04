@@ -31,7 +31,7 @@ const $EXPRESS  = require('express');
 const $APP      = $EXPRESS();
 const $HTTP     = require('http').Server($APP);
 const $IO       = require('socket.io')($HTTP);
-
+/*
 //PARAMETERS
 const $ROOT = $PATH.resolve('mmio') + '/';
 const $PORT = 25566;
@@ -78,6 +78,7 @@ const $PLY_CONNECT = function (socket) {
     socket.emit('username');
     socket.on('username', function (username) {
         if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
+            $USERNAMES.push(username);
             //Create player
             let ply = new $PLAYER.player(socket, username, $PLAYER.classes.default);
             $PLAYERS[ply.id] = ply;
@@ -126,3 +127,7 @@ $IO.on('connection', function (socket) {
 $HTTP.listen($PORT, function(){
     console.log('Listening on port: ' + $PORT);
 });
+*/
+const gen = require('./worldgen.js');
+let world = new gen(72, 72);
+world.generate();
