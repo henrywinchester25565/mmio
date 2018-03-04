@@ -21,12 +21,12 @@ const $CLASSES = {
 };
 
 //PLAYER CLASS FOR PLAYER HANDLING
-const $PLAYERS = {};
 class Player {
-    constructor (socket, plyClass) {
+    constructor (socket, username, plyClass) {
         this.type   = 'player';
         this.socket = socket;
         this.id     = socket.id;
+        this.nick   = username;
 
         //INPUT
         this.keys = [];
@@ -66,18 +66,13 @@ class Player {
         Object.assign(this.stats, this.plyClass.stats);
         this.xp = 0;
 
-        $PLAYERS[socket.id] = this;
         this.entity = new $ENTITY.ents.ply(2,2);
 
         this.socket.emit('ply', this.entity.scrape());
     }
 
-    kill () {
-        delete $PLAYERS[this.socket.id];
-    }
 }
 
 //EXPORTS
 exports.player  = Player;
-exports.players = $PLAYERS;
 exports.classes = $CLASSES;
