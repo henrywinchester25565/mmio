@@ -10,13 +10,14 @@ const $ENTITY = require('./entity.js');
 const $EVENTS = require('./events.js').handler;
 const $WORLD  = require('./world.js');
 const $VECTOR = require('./general.js').vector;
+const $GEN    = require('./worldgen.js');
 
 //PARAMETERS
 const $DEFAULT_PARAMS = {
     max_entities: 50,
     max_players: 12,
-    world_width: 24,
-    world_height: 48
+    world_width: 72,
+    world_height: 72
 };
 
 //GAME
@@ -26,7 +27,9 @@ class Game {
         this.setParameters(args); //this.args <= the games parameters
         this.players = [];
 
-        this.world = new $WORLD(this.args.world_width, this.args.world_height);
+        let worldGen = new $GEN(this.args.world_width, this.args.world_height);
+        this.world = worldGen.generate();
+        this.spawn = worldGen.graph.nodes[0].pos;
 
         this.changed = []; //Entities changed since last update
         
@@ -35,38 +38,6 @@ class Game {
             //console.log('update');
             self.changed = changed;
         });
-
-        //TEMP
-        this.addWalls([
-            {x: 0, y: 0, w: 23, h: 1},
-            {x: 0, y: 1, w: 1, h: 38},
-            {x: 0, y: 39, w: 20, h: 1},
-            {x: 19, y: 4, w: 1, h: 35},
-            {x: 1, y: 4, w: 8, h: 1},
-            {x: 9, y: 4, w: 1, h: 10},
-            {x: 4, y: 13, w: 5, h: 1},
-            {x: 13, y: 4, w: 1, h: 4},
-            {x: 14, y: 4, w: 5, h: 1},
-            {x: 13, y: 10, w: 1, h: 4},
-            {x: 14, y: 13, w: 5, h: 1},
-            {x: 20, y: 13, w: 3, h: 1},
-            {x: 23, y: 1, w: 1, h: 13},
-            {x: 14, y: 7, w: 2, h: 1},
-            {x: 4, y: 22, w: 6, h: 1},
-            {x: 9, y: 17, w: 1, h: 5},
-            {x: 1, y: 26, w: 9, h: 1},
-            {x: 10, y: 26, w: 1, h: 10},
-            {x: 1, y: 35, w: 2, h: 1},
-            {x: 6, y: 35, w: 4, h: 1},
-            {x: 11, y: 35, w: 2, h: 1},
-            {x: 16, y: 35, w: 3, h: 1}
-        ]);
-
-        let l1 = new $ENTITY.ents.light(5, 30, 0x4cb6e8, 1, 8);
-        let l2 = new $ENTITY.ents.light(15, 22, 0xe51647, 1, 30);
-
-        this.world.queueChild(l1);
-        this.world.queueChild(l2);
 
         this.running = false;
     }
@@ -90,6 +61,8 @@ class Game {
         let index = this.players.indexOf(ply); //If already in game
         if (this.players.length <= this.args.max_players && index === -1) {
             this.players.push(ply);
+            ply.entity.x = this.spawn.x;
+            ply.entity.y = this.spawn.y;
             this.world.addChild(ply.entity);
         }
     }
@@ -173,7 +146,7 @@ class Game {
                     }
                     if (dir.x !== 0 || dir.y !== 0) {
                         dir = $VECTOR.nrm(dir);
-                        let force = $VECTOR.pro(2000*3, dir);
+                        let force = $VECTOR.pro(2000, dir);
 
                         ply.entity.forces.push(force);
                     }
