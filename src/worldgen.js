@@ -866,7 +866,8 @@ class WorldGen {
         //Go through every point of the canvas and carve walls
         let num = 1;
         let wall = true;
-        while (wall) {
+        attempts = 50;
+        while (wall && attempts > 0) {
             wall = false;
             for (let x = 0; x < this.canvas.canvas.length; x++) {
                 for (let y = 0; y < this.canvas.canvas[0].length; y++) {
@@ -889,11 +890,11 @@ class WorldGen {
                             let wall = new $ENTITY.ents.wall(xMin, yMin, w, h);
                             world.queueChild(wall);
                         }
-
                     }
 
                 }
             }
+            attempts --;
         }
 
         this.canvas.print();
