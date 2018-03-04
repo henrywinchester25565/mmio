@@ -1,6 +1,8 @@
 //REQUIREMENTS
 const $VECTOR = require('./general.js').vector;
 const $BOUNDS = require('./bounds.js');
+const $WORLD  = require('./world.js');
+const $ENTITY = require('./entity.js');
 
 //NODE
 class Node {
@@ -257,10 +259,9 @@ const $DIR = {
 class WorldGen {
 
     constructor (w, h, min, max, edg) {
-        this.w = w < 24 || 24;
-        this.h = h < 24 || 24;
+        this.w = w < 24 ? 24 : w;
+        this.h = h < 24 ? 24 : h;
         this.graph = new Graph();
-        this.canvas = new WorldCanvas(w, h, $PAINT.void);
 
         this.minLength = min - min%3 +2|| 2*3+2;
         this.maxLength = max - min%3 +2|| 7*3+2;
@@ -363,14 +364,15 @@ class WorldGen {
 
     //Tests to see if wall is end of wall (maximum of one wall besides it)
     //And returns the directions of the neighbouring wall, (0,0 if has none) or undefined
-    endDir (pos) {
+    endDir (pos, canvas) {
+        canvas = canvas || this.canvas;
         let dir;
         for (let d in $DIR) {
             if ($DIR.hasOwnProperty(d)) {
 
                 let spc = $VECTOR.add($DIR[d], pos);
-                if (this.canvas.inCanvas(spc)) {
-                    if (this.canvas.canvas[spc.x][spc.y] === $PAINT.wall) {
+                if (canvas.inCanvas(spc)) {
+                    if (canvas.canvas[spc.x][spc.y] === $PAINT.wall) {
 
                         //Set dir to directions if wall
                         if (dir === undefined) {
@@ -415,13 +417,14 @@ class WorldGen {
         return false;
     }
 
-    pushLine (pos, dir) {
+    pushLine (pos, dir, canvas) {
+        canvas = canvas || this.canvas;
         while (true) {
             //Test ahead
             let next = $VECTOR.add(dir, pos);
-            if (this.canvas.inCanvas(next)) {
+            if (canvas.inCanvas(next)) {
                 //If reaches end of wall
-                if (this.canvas.canvas[next.x][next.y] !== $PAINT.wall) {
+                if (canvas.canvas[next.x][next.y] !== $PAINT.wall) {
                     return pos;
                 }
             }
@@ -438,7 +441,7 @@ class WorldGen {
 
             //At this point, next is standalone wall, not at corner or edge
             //Or out of map
-            this.canvas.canvas[pos.x][pos.y] = $PAINT.void; //Delete wall
+            canvas.canvas[pos.x][pos.y] = $PAINT.void; //Delete wall
             pos = next;
         }
     }
@@ -486,33 +489,10 @@ class WorldGen {
         return false;
     }
 
-    wallLength (pos) {
-        if (this.canvas.inCanvas(pos)) {
-
-            let length = 0;
-
-            let dir = this.endDir(pos);
-            if (this.canvas.canvas[pos.x][pos.y] === $PAINT.wall && dir !== undefined) {
-                //If wall only one unit by one unit
-                if (dir === {x: 0, y:0}) {
-                    return 1;
-                }
-
-                //Move along wall and increment length
-                while (this.canvas.inCanvas(pos)) {
-
-                    if (this.canvas.canvas[pos.x][pos.y] === $PAINT.wall) {
-
-                    }
-
-                }
-
-            }
-        }
-    }
-
     generate () {
         console.log('>> World generating...');
+
+        this.canvas = new WorldCanvas(this.w, this.h, $PAINT.void);
 
         let pos = {
             x: 4,
@@ -612,11 +592,7 @@ class WorldGen {
             attempts++;
 
         }
-
-        //Draw graph and print last time
-        console.log('### FINAL ROUTE ###');
         this.drawGraph($PAINT.path);
-        this.canvas.print();
 
         //Walls
         let n=1;
@@ -692,7 +668,7 @@ class WorldGen {
         //Walls causing corridors get pushed
         //Fill in empty space where there is no path
 
-        this.canvas.print();
+        //this.canvas.print();
 
         //Get directions to operate in
         let directions = [];
@@ -738,7 +714,7 @@ class WorldGen {
             }
         }
 
-        this.canvas.print();
+        //this.canvas.print();
 
         //PATCH
         for (let i = 0; i < directions.length; i++) {
@@ -782,10 +758,162 @@ class WorldGen {
             }
         }
 
-        //Print with walls
-        console.log('### WITH WALLS ###');
+        //this.canvas.print();
+
+        //FILL
+        //Fill empty space with wall in all four cardinal directions
+        for (let i = 0; i < directions.length; i++) {
+            dir = directions[i];
+            pos = {};
+            pos.x = dir.x !== 0 ? (this.w + dir.x) % (this.w + 1) : 0; //Starts at either end based on direction
+            pos.y = dir.y !== 0 ? (this.h + dir.y) % (this.h + 1) : 0;
+
+            let sideDir = dir.y === 0 ? {x: 0, y: 1} : {x: 1, y: 0}; //If direction is to right, move down
+
+            while (this.canvas.inCanvas(pos)) {
+                let paint = true;
+                let next = pos;
+                while (this.canvas.inCanvas(next) && paint) {
+                    if (this.canvas.canvas[next.x][next.y] === $PAINT.void) {
+                        //If pos is void, paint wall and add dir to pos
+                        this.canvas.canvas[next.x][next.y] = $PAINT.wall;
+                        next = $VECTOR.add(next, dir);
+
+                    }
+                    else {
+                        paint = false; //Stop painting the moment reaches something non-void
+                    }
+                }
+                pos = $VECTOR.add(pos, sideDir);
+            }
+        }
+
+        //EXTRACT
+        let extracted = new WorldCanvas(this.w, this.h, $PAINT.void);
+        let node  = this.graph.nodes[0]; //First node in graph
+        for (let i = 0; i < this.graph.nodes.length; i++) {
+
+            //Linearly traverse graph
+            let n = node.edges.length > 1 ? node.edges.length-1 : 0;
+            let next = node.edges[n].traverse(node);
+
+            //Draw line
+            extracted.line(node.pos, next.pos, $PAINT.path, r);
+
+            //Edge direction
+            let edgeDir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, node.pos), next.pos));
+
+            //Draw in directions perpendicular to edge direction along edge
+            for (let i = 0; i < directions.length; i++) {
+                if ($VECTOR.dot(edgeDir, directions[i]) === 0) {
+
+                    dir = directions[i];
+                    let start = $VECTOR.add(node.pos, $VECTOR.pro(-1, edgeDir));
+                    let end = $VECTOR.add(next.pos, $VECTOR.pro(-1, edgeDir));
+                    let pos = start;
+                    for (let p = $VECTOR.dot(edgeDir, start); p <= $VECTOR.dot(edgeDir, end); p++) {
+                        let ahead = pos;
+                        while (this.canvas.inCanvas(ahead) && this.canvas.canvas[ahead.x][ahead.y] !== $PAINT.wall) {
+                            extracted.canvas[ahead.x][ahead.y] = $PAINT.path;
+                            ahead = $VECTOR.add(ahead, dir);
+                        }
+                        pos = $VECTOR.add(pos, edgeDir);
+                    }
+
+                }
+            }
+
+            node = next;
+
+        }
+
+        //CREATE WALLS
+        //Expand path area as walls by:
+        //> Firing wall in every direction and having it stick when hitting a path
+        //Fire a position vector at wall, and carve up in direction of wall
+        for (let i = 0; i < directions.length; i++) {
+            dir = directions[i];
+            pos = {};
+            pos.x = dir.x !== 0 ? (this.w + dir.x) % (this.w + 1) : 0; //Starts at either end based on direction
+            pos.y = dir.y !== 0 ? (this.h + dir.y) % (this.h + 1) : 0;
+
+            let sideDir = dir.y === 0 ? {x: 0, y: 1} : {x: 1, y: 0}; //If direction is to right, move down
+
+            while (extracted.inCanvas(pos)) {
+
+                let next = pos;
+                while (extracted.inCanvas(next)) {
+                    
+                    if (extracted.canvas[next.x][next.y] === $PAINT.void) {
+                        let ahead = $VECTOR.add(next, dir);
+                        if (extracted.inCanvas(ahead) && extracted.canvas[ahead.x][ahead.y] === $PAINT.path) {
+                            extracted.canvas[next.x][next.y] = $PAINT.wall;
+                        }
+                    }
+                    
+                    next = $VECTOR.add(next, dir);
+                    
+                }
+
+                pos = $VECTOR.add(pos, sideDir);
+            }
+        }
+
+        //Generated world
+        let world = new $WORLD(this.w, this.h);
+
+        this.canvas = extracted;
+        //Go through every point of the canvas and carve walls
+        let num = 1;
+        let wall = true;
+        while (wall) {
+            wall = false;
+            for (let x = 0; x < this.canvas.canvas.length; x++) {
+                for (let y = 0; y < this.canvas.canvas[0].length; y++) {
+
+                    let pos = {x: x, y: y};
+                    if (this.canvas.inCanvas(pos) && this.canvas.canvas[x][y] === $PAINT.wall) {
+                        wall = true;
+                        dir = this.endDir(pos);
+                        if (dir !== undefined) {
+                            let end = this.pushLine(pos, dir);
+                            this.canvas.canvas[pos.x][pos.y] = num;
+                            this.canvas.line(pos, end, num, 0, $PAINT.path);
+                            num++;
+
+                            //Make walls
+                            let xMin = pos.x < end.x ? pos.x : end.x;
+                            let yMin = pos.y < end.y ? pos.y : end.y;
+                            let w = Math.abs(pos.x - end.x) + 1;
+                            let h = Math.abs(pos.y - end.y) + 1;
+                            let wall = new $ENTITY.ents.wall(xMin, yMin, w, h);
+                            world.queueChild(wall);
+                        }
+
+                    }
+
+                }
+            }
+        }
+
         this.canvas.print();
 
+        //TEMP?
+        //Place lights at the nodes
+        /*
+        let colors = [0x5092fc, 0xe82c57, 0x46ce37, 0xef56b4, 0xffffff];
+        console.log(this.graph.nodes.length);
+        for (let i = 0; i < this.graph.nodes.length; i++) {
+            node = this.graph.nodes[i];
+            let pos = node.pos;
+            let index = Math.floor(Math.random() * (colors.length - 1));
+            let color = colors[index];
+            let light = new $ENTITY.ents.light(pos.x, pos.y, color, 2, 12);
+            world.queueChild(light);
+        }
+        */
+
+        return world;
     }
 
 }
