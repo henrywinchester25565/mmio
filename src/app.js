@@ -55,19 +55,68 @@ const $PLAYER = require('./player.js');
 
 console.log('');//Break in console
 
-const game = new $GAME();
-game.start();
+//Table of games
+//Game id, game object relationship
+const $GAMES = {};
+//TODO ^
+let game;
+
+//Table of all players
+//Socket id, player object relationship
+const $PLAYERS = {};
+//List of all taken username's
+const $USERNAMES = [];
+//Functions to handle (dis)connect
+const $PLY_CONNECT = function (socket) {
+    console.log('Connection: ' + socket.id);
+
+    if ($USERNAMES.length === 0) {
+        game = new $GAME();
+        game.start();
+    }
+
+    socket.emit('username');
+    socket.on('username', function (username) {
+        if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
+            //Create player
+            let ply = new $PLAYER.player(socket, username, $PLAYER.classes.default);
+            $PLAYERS[ply.id] = ply;
+            socket.emit('ready');
+
+            //Add to game
+            game.addPlayer(ply);
+        }
+        else {
+            socket.emit('username');
+        }
+    });
+};
+
+const $PLY_DISCONNECT = function (socket) {
+    console.log('Disconnection: ', socket.id);
+
+    if ($PLAYERS[socket.id] !== undefined) {
+        let ply = $PLAYERS[socket.id];
+        //Remove player from game
+        game.killPlayer(ply);
+
+        //Clear username for others to use
+        let index = $USERNAMES.indexOf(ply.nick);
+        if (index > -1) {
+            $USERNAMES.splice(index, 1);
+        }
+
+        //Remove player for players
+        delete $PLAYERS[socket.id];
+    }
+};
 
 console.log('');
 
 $IO.on('connection', function (socket) {
-    console.log('Connection: ' + socket.id);
-    let ply = new $PLAYER.player(socket, $PLAYER.classes.default);
-    game.addPlayer(ply);
+    $PLY_CONNECT(socket);
     socket.on('disconnect', function () {
-        console.log('Disconnection: ', socket.id);
-        game.killPlayer(ply);
-        ply.kill();
+        $PLY_DISCONNECT(socket);
     });
 });
 
