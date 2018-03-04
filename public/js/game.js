@@ -251,7 +251,7 @@ class Light extends Entity {
     constructor (id, x, y, intensity, color, distance) {
         super(id, x, y);
 
-        this.z = 4;
+        this.z = 2.4;
         this.intensity = intensity || 0.4;
         this.color = color         || 0xffffff;
         this.distance = distance   || 20;
@@ -283,7 +283,7 @@ class Wall extends Entity {
 
     //Wall height (along z-axis)
     static get height () {
-        return 4;
+        return 2.4;
     }
 
     static get material () {
@@ -451,17 +451,17 @@ class Player extends Dynamic {
     init () {
         let group = new THREE.Group();
 
-        let light = new THREE.PointLight(0xd2d2ff, 1, 8, 2);
+        let light = new THREE.PointLight(0xd2d2ff, 1, 30, 2);
         light.shadow.mapSize.width = 1024;
         light.shadow.mapSize.height = 1024;
         light.castShadow = true;
-        light.position.z = 4;
+        light.position.z = 2;
         group.add(light);
 
         let char = objects['mage'].clone();
         char.rotation.x = Math.PI/2;
         char.rotation.y = Math.PI;
-        char.scale.set(3, 3, 3);
+        char.scale.set(2,2,2);
         group.add(char);
 
         group.position.set(this.x, this.y, 0);
@@ -531,7 +531,6 @@ class Floor {
             specular.repeat.set( this.w/3, this.h/3);
             material.specularMap = specular;
         }
-
 
         this.obj = new THREE.Mesh(geo, material);
         this.obj.receiveShadow = true;
@@ -638,11 +637,11 @@ class World {
             self.camera.z = self.camera.z + dy;
             console.log(dy);
             //Clip
-            if (self.camera.z < 7) {
-                self.camera.z = 7;
+            if (self.camera.z < 6) {
+                self.camera.z = 6;
             }
-            else if (self.camera.z > 20) {
-                self.camera.z = 20;
+            else if (self.camera.z > 30) {
+                self.camera.z = 30;
             }
 
         }, false);
@@ -849,6 +848,10 @@ function init () {
         input: sends the client input
     
     */
+
+    socket.on('username', function () {
+        socket.emit('username', Math.random());
+    });
     
     //INITIALISE WORLD
     socket.on('world_init', worldInit);
