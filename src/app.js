@@ -31,7 +31,7 @@ const $EXPRESS  = require('express');
 const $APP      = $EXPRESS();
 const $HTTP     = require('http').Server($APP);
 const $IO       = require('socket.io')($HTTP);
-/*
+
 //PARAMETERS
 const $ROOT = $PATH.resolve('mmio') + '/';
 const $PORT = 25566;
@@ -127,7 +127,3 @@ $IO.on('connection', function (socket) {
 $HTTP.listen($PORT, function(){
     console.log('Listening on port: ' + $PORT);
 });
-*/
-const gen = require('./worldgen.js');
-let world = new gen(72, 72);
-world.generate();
