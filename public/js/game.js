@@ -435,6 +435,7 @@ const plyClasses = {
 };
 
 //PLAYER TOKEN CLASS
+let colors = [0x5092fc, 0xe82c57, 0x46ce37, 0xef56b4, 0xffffff];
 class Player extends Dynamic {
 
     static get type () {
@@ -451,7 +452,9 @@ class Player extends Dynamic {
     init () {
         let group = new THREE.Group();
 
-        let light = new THREE.PointLight(0xd2d2ff, 1, 30, 2);
+        let color = colors[Math.floor(Math.random()*(colors.length - 1))];
+
+        let light = new THREE.PointLight(color, 1, 30, 2);
         light.shadow.mapSize.width = 1024;
         light.shadow.mapSize.height = 1024;
         light.castShadow = true;
@@ -462,6 +465,9 @@ class Player extends Dynamic {
         char.rotation.x = Math.PI/2;
         char.rotation.y = Math.PI;
         char.scale.set(2,2,2);
+        let mat = char.getObjectByName('Base').material;
+        mat.emissive = color;
+        mat.needsUpdate = true;
         group.add(char);
 
         group.position.set(this.x, this.y, 0);
