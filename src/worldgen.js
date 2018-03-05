@@ -264,7 +264,7 @@ class WorldGen {
         this.graph = new Graph();
 
         this.minLength = min - min%3 +2|| 2*3+2;
-        this.maxLength = max - min%3 +2|| 7*3+2;
+        this.maxLength = max - max%3 +2|| 7*3+2;
         this.minEdges  = edg           || 30;
     }
 
@@ -523,6 +523,7 @@ class WorldGen {
 
             //Free spaces before a collision
             let length = this.minAhead(pos, dir, c, r);
+            length = (length - length%3);
 
             //Path distance
             let dist = this.minLength + Math.floor(Math.random() * range);
