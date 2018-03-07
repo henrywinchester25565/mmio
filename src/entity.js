@@ -340,6 +340,38 @@ class Physics extends Entity {
 
 }
 
+//BARREL (PROP) CLASS
+class Barrel extends  Physics {
+
+    constructor (x, y) {
+        super(x, y);
+        this.radius = 0.8;
+
+        //100kg
+        this.mass = 100;
+
+        //Area for drag
+        this.area = this.radius * this.radius;
+
+        //Circle bounds
+        this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
+
+        this.type = 'barrel';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            a: this.a,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        }
+    }
+
+}
+
 //PLAYER CLASS
 class Player extends Physics {
 
@@ -347,10 +379,10 @@ class Player extends Physics {
         super(x, y);
         this.radius = r || 0.6;
 
-        //A player with radius 0.4 is considered average,
+        //A player with radius 0.8 is considered average,
         //So is given the average mass of an adult male.
         //The constant used allows for scaling.
-        this.mass = this.radius * this.radius * Math.PI * 149;
+        this.mass = this.radius * this.radius * Math.PI * 74;
 
         //Area for drag
         this.area = this.radius * this.radius; //Assume in cube
@@ -366,7 +398,6 @@ class Player extends Physics {
             x: this.x,
             y: this.y,
             a: this.a,
-            r: this.radius,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -381,6 +412,7 @@ const $ENTITIES = {
     wall: Wall,
     light: Light,
     phys: Physics,
+    barrel: Barrel,
     ply: Player
 };
 
