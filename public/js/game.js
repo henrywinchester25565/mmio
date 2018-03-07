@@ -400,16 +400,9 @@ class Physics extends Dynamic {
     }
 
     init () {
-        let light = new THREE.PointLight(0x3C98EB, 3, 8, 2);
-        light.shadow.mapSize.width = 1024;
-        light.shadow.mapSize.height = 1024;
-        light.castShadow = true;
-        light.position.z = 0.3;
-
-        let obj = new THREE.Group();
-        obj.add(light);
-        obj.position.set(this.x, this.y, 0);
-
+        let geo = new THREE.CylinderBufferGeometry(0.1, 0.1, 0.2);
+        let mat = new THREE.MeshBasicMaterial({color: 0xff0000});
+        let obj = new THREE.Mesh(geo, mat);
         this.obj = obj;
         return obj;
     }
@@ -420,6 +413,37 @@ class Physics extends Dynamic {
 
 }
 entities[Physics.type] = Physics;
+
+//BARREL PROP
+//A barrel prop that can be pushed around
+class Barrel extends Dynamic {
+
+    static get type () {
+        return 'barrel';
+    }
+
+    constructor (id, x, y, a) {
+        super(id, x, y, a);
+    }
+
+    init () {
+        let geo = new THREE.CylinderBufferGeometry(0.8, 0.8, 1.6);
+        geo.rotateX(Math.PI/2);
+        let mat = new THREE.MeshPhongMaterial({color: 0xa39375});
+        let obj = new THREE.Mesh(geo, mat);
+        console.log(obj.position);
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        this.obj = obj;
+        return obj;
+    }
+
+    static fromScrape (scrape) {
+        return new Barrel(scrape.id, scrape.x, scrape.y, scrape.a);
+    }
+
+}
+entities[Barrel.type] = Barrel;
 
 //PLAYER GAME CLASSES
 const plyClasses = {
@@ -442,10 +466,8 @@ class Player extends Dynamic {
         return 'player';
     }
 
-    constructor (id, x, y, a, r) {
+    constructor (id, x, y, a) {
         super(id, x, y, a);
-
-        this.radius = r;
     }
 
     //Temp
@@ -466,7 +488,7 @@ class Player extends Dynamic {
         char.rotation.y = Math.PI;
         char.scale.set(2,2,2);
         let mat = char.getObjectByName('Base').material;
-        mat.emissive = color;
+        mat.emissive = new THREE.Color(color);
         mat.needsUpdate = true;
         group.add(char);
 
@@ -476,7 +498,7 @@ class Player extends Dynamic {
     }
 
     static fromScrape (scrape) {
-        return new Player(scrape.id, scrape.x, scrape.y, scrape.a, scrape.r)
+        return new Player(scrape.id, scrape.x, scrape.y, scrape.a)
     }
 
 }
