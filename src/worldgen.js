@@ -245,6 +245,7 @@ const $PAINT = {
     void: '.',
     path: ' ',
     wall: '##',
+    barrel: 'O '
 };
 
 //CARDINAL DIRECTIONS
@@ -898,23 +899,20 @@ class WorldGen {
             attempts --;
         }
 
-        this.canvas.print();
-
-        //TEMP?
-        //Place lights at the nodes
-        /*
-        let colors = [0x5092fc, 0xe82c57, 0x46ce37, 0xef56b4, 0xffffff];
-        console.log(this.graph.nodes.length);
-        for (let i = 0; i < this.graph.nodes.length; i++) {
-            node = this.graph.nodes[i];
-            let pos = node.pos;
-            let index = Math.floor(Math.random() * (colors.length - 1));
-            let color = colors[index];
-            let light = new $ENTITY.ents.light(pos.x, pos.y, color, 2, 12);
-            world.queueChild(light);
+        //Add barrels
+        let barrels = Math.random() * this.graph.edges.length;
+        for (let i = 0; i < barrels; i++) {
+            pos = {x: 0, y: 0};
+            while (this.canvas.canvas[pos.x][pos.y] !== $PAINT.path) {
+                pos.x = Math.floor(Math.random() * (this.w-1));
+                pos.y = Math.floor(Math.random() * (this.h-1));
+            }
+            this.canvas.canvas[pos.x][pos.y] = $PAINT.barrel;
+            let barrel = new $ENTITY.ents.barrel(pos.x, pos.y);
+            world.queueChild(barrel);
         }
-        */
 
+        this.canvas.print();
         return world;
     }
 
