@@ -146,7 +146,7 @@ class Game {
                     }
                     if (dir.x !== 0 || dir.y !== 0) {
                         dir = $VECTOR.nrm(dir);
-                        let force = $VECTOR.pro(2000, dir);
+                        let force = $VECTOR.pro(1300, dir);
 
                         ply.entity.forces.push(force);
                     }
