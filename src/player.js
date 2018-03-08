@@ -30,6 +30,7 @@ class Player {
 
         //INPUT
         this.keys = [];
+        this.btns = [];
         this.mouse = {x: 0, y: 0};
 
         let self = this;
@@ -52,6 +53,11 @@ class Player {
                                     self.mouse.y = input.value.y;
                                 }
                                 break;
+                            case 'btn':
+                                if (typeof input.value === 'string') {
+                                    self.btns.push(input.value);
+                                }
+                                break;
                         }
 
                     }
@@ -66,7 +72,7 @@ class Player {
         Object.assign(this.stats, this.plyClass.stats);
         this.xp = 0;
 
-        this.entity = new $ENTITY.ents.ply(2,2);
+        this.entity = new $ENTITY.ents.mage(2,2);
 
         this.socket.emit('ply', this.entity.scrape());
     }
