@@ -231,6 +231,7 @@ class Physics extends Entity {
                 }
                 //If dynamic collision
                 else {
+                    //TODO THIS IS BROKEN
                     //Find impulse of other on self
                     let vel = collision.velocity;
                     let mass = collision.mass;
@@ -344,9 +345,9 @@ class Barrel extends Physics {
 
     constructor (x, y) {
         super(x, y);
-        this.radius = 0.8;
+        this.radius = 0.6;
 
-        //100kg
+        //300kg
         this.mass = 100;
 
         //Area for drag
@@ -354,6 +355,20 @@ class Barrel extends Physics {
 
         //Circle bounds
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
+
+        //BEHAVIOUR
+        this.health = 30;
+
+        let self = this;
+        //Damaged
+        this.onCollide(function (entity) {
+            if (entity.damage !== undefined && entity.damage > 0) {
+                self.health = self.health - entity.damage;
+                if (self.health <= 0) {
+                    self.kill();
+                }
+            }
+        });
 
         this.type = 'barrel';
     }
@@ -451,8 +466,10 @@ class Player extends Physics {
         //Attack ammo
         this.maxAmmo      = ammo || 3;
         this.ammo         = ammo || 3;
-        this.cooldownTime = 1000;                //Recharge time for 1 ammo, ms
-        this.cooldown     = 1000; //Time recharging, ms
+        this.cooldownTime = 1000;  //Reload time for 1 ammo, ms
+        this.cooldown     = 1000; //Time reloading, ms
+        this.fireRate     = 200;
+        this.lastRound    = 200;
 
         //Active weapons
         this.weapons = []; //Game adds created weapons to world
@@ -479,18 +496,6 @@ class Player extends Physics {
                 }
             }
         });
-
-        //Reload
-        this.onUpdate(function (dt) {
-            if (self.ammo < self.maxAmmo) {
-                self.cooldown = self.cooldown - dt;
-                if (self.cooldown <= 0) {
-                    self.cooldown = self.cooldownTime;
-                    self.ammo++; //Add ammo
-                }
-            }
-        });
-
     }
     
     //Primary Attack Event
@@ -545,7 +550,7 @@ class Mage extends Player {
         //ATTACK BEHAVIOUR
         let self = this;
         this.onAttackPrimary(function (target) {
-            if (self.ammo > 0) {
+            if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 //Direction from centre to target vector
                 let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: self.x, y: self.y}), target));
                 let force = $VECTOR.pro(35000, dir);
@@ -563,6 +568,23 @@ class Mage extends Player {
                 self.weapons.push(projectile);
 
                 self.ammo--;
+                self.lastRound = 0;
+            }
+        });
+
+        //Reload
+        this.onUpdate(function (dt) {
+            if (self.ammo <= 0) {
+                //Reload
+                self.cooldown = self.cooldown - dt;
+                if (self.cooldown <= 0) {
+                    self.cooldown = self.cooldownTime;
+                    self.ammo = self.maxAmmo; //Add ammo
+                }
+            }
+            //Fire rate
+            if (self.lastRound < self.fireRate) {
+                self.lastRound = self.lastRound + dt;
             }
         });
     }
