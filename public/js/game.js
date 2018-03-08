@@ -208,7 +208,6 @@ class Entity {
     kill () {
         this.events.emit('kill');
         this.alive = false; //After finished handling calls
-        console.log(this.id, this.alive, 'kill');
     }
 
     //Called when entity updated by server
@@ -339,7 +338,7 @@ class Dynamic extends Entity {
     constructor (id, x, y, angle) {
         super (id, x, y);
 
-        this.a = angle;
+        this.a = angle || 0;
 
         //INTERPOLATION
         this.end = {x: this.x, y: this.y, a: this.a};
@@ -347,7 +346,6 @@ class Dynamic extends Entity {
 
         let self = this;
         //Event listeners to update and animate position
-        //TODO Smoother interpolation
         this.events.on('update', function (scrape) {
             //Move to end state
             self.x = self.end.x;
@@ -357,7 +355,7 @@ class Dynamic extends Entity {
             //Update end state
             self.end.x = scrape.x;
             self.end.y = scrape.y;
-            self.end.a = scrape.a;
+            self.end.a = scrape.a || 0;
 
             //Calculate velocity
             self.vel.x = (self.end.x - self.x)/updateTime;
@@ -395,12 +393,13 @@ class Physics extends Dynamic {
         return 'phys';
     }
 
-    constructor (id, x, y, a) {
-        super (id, x, y, a);
+    constructor (id, x, y) {
+        super (id, x, y);
     }
 
     init () {
-        let geo = new THREE.CylinderBufferGeometry(0.1, 0.1, 0.2);
+        let geo = new THREE.CylinderBufferGeometry(0.15, 0.15, 0.3);
+        geo.rotateX(Math.PI/2);
         let mat = new THREE.MeshBasicMaterial({color: 0xff0000});
         let obj = new THREE.Mesh(geo, mat);
         this.obj = obj;
@@ -408,7 +407,7 @@ class Physics extends Dynamic {
     }
 
     static fromScrape (scrape) {
-        return new Physics(scrape.id, scrape.x, scrape.y, scrape.a);
+        return new Physics(scrape.id, scrape.x, scrape.y);
     }
 
 }
@@ -422,8 +421,8 @@ class Barrel extends Dynamic {
         return 'barrel';
     }
 
-    constructor (id, x, y, a) {
-        super(id, x, y, a);
+    constructor (id, x, y) {
+        super(id, x, y);
     }
 
     init () {
@@ -431,7 +430,6 @@ class Barrel extends Dynamic {
         geo.rotateX(Math.PI/2);
         let mat = new THREE.MeshPhongMaterial({color: 0xa39375});
         let obj = new THREE.Mesh(geo, mat);
-        console.log(obj.position);
         obj.castShadow = true;
         obj.receiveShadow = true;
         this.obj = obj;
@@ -439,7 +437,7 @@ class Barrel extends Dynamic {
     }
 
     static fromScrape (scrape) {
-        return new Barrel(scrape.id, scrape.x, scrape.y, scrape.a);
+        return new Barrel(scrape.id, scrape.x, scrape.y);
     }
 
 }
@@ -468,6 +466,22 @@ class Player extends Dynamic {
 
     constructor (id, x, y, a) {
         super(id, x, y, a);
+        this.health = 1;
+
+        let self = this;
+        this.events.on('update', function (scrape) {
+            if (self.health !== scrape.health) {
+                self.health = scrape.health;
+                let light = self.obj.getObjectByName('light');
+                light.intensity = self.health;
+                light.distance = 30 * self.health;
+            }
+
+        });
+
+        this.events.on('kill', function () {
+            console.log('killed');
+        });
     }
 
     //Temp
@@ -481,6 +495,7 @@ class Player extends Dynamic {
         light.shadow.mapSize.height = 1024;
         light.castShadow = true;
         light.position.z = 2;
+        light.name = 'light';
         group.add(light);
 
         let char = objects['mage'].clone();
@@ -488,7 +503,7 @@ class Player extends Dynamic {
         char.rotation.y = Math.PI;
         char.scale.set(2,2,2);
         let mat = char.getObjectByName('Base').material;
-        mat.emissive = new THREE.Color(color);
+        mat.emissive = new THREE.Color(0xffffff);
         mat.needsUpdate = true;
         group.add(char);
 
@@ -663,7 +678,6 @@ class World {
         window.addEventListener('wheel', function (event) {
             let dy = event.deltaY / 100;
             self.camera.z = self.camera.z + dy;
-            console.log(dy);
             //Clip
             if (self.camera.z < 6) {
                 self.camera.z = 6;
@@ -695,7 +709,7 @@ class World {
     //Delete from world
     removeChild (id) {
         if (this.children.hasOwnProperty(id)) {
-            this.scene.remove(this.children[id]);
+            this.scene.remove(this.children[id].obj);
             delete this.children[id];
         }
     }
@@ -825,6 +839,7 @@ let plyId;
 
 //INPUT
 let keys = [];
+let btns = [];
 let inputs = [];
 
 //UPDATE
@@ -902,8 +917,16 @@ function init () {
         }
     });
 
-    //GET MOUSE
-    //TODO
+    //MOUSE is in CAMERA due to requirements of camera raycasting
+
+    //MOUSE BUTTONS
+    document.addEventListener('click', function (event) {
+        let btn = 'Mouse' + event.button;
+        let index = btns.indexOf(btn);
+        if (index === -1) {
+            btns.push(btn);
+        }
+    });
 
     //SEND SERVER INPUTS EVERY 33ms
     window.setInterval(function(){
@@ -911,8 +934,12 @@ function init () {
         for (let i = 0; i < keys.length; i++) {
             inputs.push({type: 'key', value: keys[i]});
         }
+        for (let i = 0; i < btns.length; i++) {
+            inputs.push({type: 'btn', value: btns[i]});
+        }
         inputs.push({type: 'mouse', value: {x: world.mouse.x, y: world.mouse.y}});
-        socket.emit('input', inputs)
+        socket.emit('input', inputs);
+        btns = [];
     }, 33);
     
 }
