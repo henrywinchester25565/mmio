@@ -119,7 +119,6 @@ class World {
             let collisions = $BOUNDS.getCollisions(self.children);
             for (let i = 0; i < collisions.length; i++) {
                 let pair = collisions[i];
-                //console.log('pair:', pair[0].type, pair[1].type);
                 pair[0].collide(pair[1], $TIME_STEP);
                 pair[1].collide(pair[0], $TIME_STEP);
             }
