@@ -15,7 +15,7 @@ const $GEN    = require('./worldgen.js');
 //PARAMETERS
 const $DEFAULT_PARAMS = {
     max_entities: 50,
-    max_players: 12,
+    max_players: 8,
     world_width: 72,
     world_height: 72
 };
@@ -35,8 +35,13 @@ class Game {
         
         let self = this;
         this.world.onUpdate(function(changed){
-            //console.log('update');
-            self.changed = changed;
+            //Merge together due to sync issues
+            for (let i = 0; i < changed.length; i++) {
+                let index = self.changed.indexOf(changed[i]);
+                if (index === -1) {
+                    self.changed.push(changed[i]);
+                }
+            }
         });
 
         this.running = false;
@@ -109,11 +114,13 @@ class Game {
             if (self.running) {
                 let changed = [];
                 for (let i = 0; i < self.changed.length; i++) {
-                    changed.push(self.changed[i].scrape());
+                    let ent = self.changed[i];
+                    changed.push(ent.scrape());
                 }
                 for (let i = 0; i < self.players.length; i++) {
                     self.players[i].socket.emit('update', changed);
                 }
+                self.changed = [];
                 setTimeout(updateClients, 50);
             }
         };
@@ -125,6 +132,16 @@ class Game {
                 let plys = self.players;
                 for (let i = 0; i < plys.length; i++) {
                     let ply = plys[i];
+
+                    //MOUSE TARGET
+                    let target = ply.mouse;
+                    if (ply.mouse.x !== 0 && ply.mouse.y !== 0) {
+                        //ROTATE
+                        let pos = {x: ply.entity.x, y: ply.entity.y};
+                        let dir = $VECTOR.add($VECTOR.pro(-1, pos), ply.mouse);
+                        dir.x = dir.x * -1; //Not sure why I have to do this
+                        ply.entity.angle = $VECTOR.ang(dir);
+                    }
 
                     //KEYS
                     let dir = {x: 0, y: 0};
@@ -151,15 +168,20 @@ class Game {
                         ply.entity.forces.push(force);
                     }
 
-                    //MOUSE
-                    if (ply.mouse.x !== 0 && ply.mouse.y !== 0) {
-                        let pos = {x: ply.entity.x, y: ply.entity.y};
-                        let dir = $VECTOR.add($VECTOR.pro(-1, pos), ply.mouse);
-                        dir.x = dir.x * -1; //Not sure why I have to do this
-                        //TODO figure out why I have to do above ^^^
-                        ply.entity.angle = $VECTOR.ang(dir);
+                    //MOUSE BTNS
+                    for (let j = 0; j < ply.btns.length; j++) {
+                        switch (ply.btns[j]) {
+                            case 'Mouse0':
+                                ply.entity.attackPrimary(target);
+                                //Add latest weapon to world
+                                if (ply.entity.weapons.length > 0) {
+                                    self.world.addChild(ply.entity.weapons[ply.entity.weapons.length-1]);
+                                }
+                                break;
+                        }
                     }
-
+                    //Reset btns so no 'double tap' due to fast update time
+                    ply.btns = [];
                 }
                 setTimeout(updatePlayer, 15);
             }
