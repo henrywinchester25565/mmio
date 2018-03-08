@@ -903,9 +903,20 @@ class WorldGen {
         let barrels = Math.random() * this.graph.edges.length;
         for (let i = 0; i < barrels; i++) {
             pos = {x: 0, y: 0};
-            while (this.canvas.canvas[pos.x][pos.y] !== $PAINT.path) {
+            let walls = false;
+            while (this.canvas.canvas[pos.x][pos.y] !== $PAINT.path || walls) {
                 pos.x = Math.floor(Math.random() * (this.w-1));
                 pos.y = Math.floor(Math.random() * (this.h-1));
+                //No adjacent walls
+                walls = false;
+                for (let direction in $DIR) {
+                    if ($DIR.hasOwnProperty(direction)) {
+                        let check = $VECTOR.add($DIR[direction], pos);
+                        if (this.canvas.inCanvas(check) && this.canvas.canvas[check.x][check.y] !== $PAINT.path) {
+                            walls = true;
+                        }
+                    }
+                }
             }
             this.canvas.canvas[pos.x][pos.y] = $PAINT.barrel;
             let barrel = new $ENTITY.ents.barrel(pos.x, pos.y);
