@@ -272,7 +272,7 @@ class Physics extends Entity {
             }
 
             //Drag
-            if (speed > 0) {
+            if (speed > 1) {
                 //Using the equation Fd = 0.5p(u^2)A
                 let scalarDrag = 0.5 * $AIR * speed * speed * self.area;
                 //Normalise velocity and multiply by -drag for drag force
@@ -331,7 +331,6 @@ class Physics extends Entity {
         return {
             x: this.x,
             y: this.y,
-            a: this.a,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -341,7 +340,7 @@ class Physics extends Entity {
 }
 
 //BARREL (PROP) CLASS
-class Barrel extends  Physics {
+class Barrel extends Physics {
 
     constructor (x, y) {
         super(x, y);
@@ -363,7 +362,6 @@ class Barrel extends  Physics {
         return {
             x: this.x,
             y: this.y,
-            a: this.a,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -372,11 +370,65 @@ class Barrel extends  Physics {
 
 }
 
+//PROJECTILE CLASS
+//Fired by players and such to do damage
+class Projectile extends Physics {
+
+    constructor (x, y, force, r, mass, damage, friendly, lifespan) {
+        super (x, y);
+        //PHYSICS
+        this.radius = r || 0.15;
+        this.mass = mass || 10;
+        this.forces.push(force);
+
+        //Area for drag
+        this.area = this.radius * this.radius; //Assume in cube
+
+        //BEHAVIOUR
+        this.damage = damage || 5;
+        this.friendly = false;
+
+        this.lifespan = lifespan || 2000; //ms
+
+        //Kill when lifespan exceeded
+        let self = this;
+        this.onUpdate(function (dt) {
+            self.lifespan = self.lifespan - dt;
+            if (self.lifespan <= 0) {
+                self.kill();
+            }
+        });
+
+        this.onCollide(function () {
+            self.kill();
+        });
+
+        //BOUNDS
+        this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
+
+        this.type = 'phys';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            //r: this.r,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+
 //PLAYER CLASS
 class Player extends Physics {
 
-    constructor (x, y, r) {
+    constructor (x, y, r, health, ammo, charge) {
         super(x, y);
+        //PHYSICS
         this.radius = r || 0.6;
 
         //A player with radius 0.8 is considered average,
@@ -387,10 +439,85 @@ class Player extends Physics {
         //Area for drag
         this.area = this.radius * this.radius; //Assume in cube
 
+        //DEFAULTS
+        //Player health
+        this.maxHealth = health || 100;
+        this.health    = health || 100;
+
+        //Player special charge
+        this.maxCharge = charge || 100;
+        this.charge    = 0;
+
+        //Attack ammo
+        this.maxAmmo      = ammo || 3;
+        this.ammo         = ammo || 3;
+        this.cooldownTime = 1000;                //Recharge time for 1 ammo, ms
+        this.cooldown     = 1000; //Time recharging, ms
+
+        //Active weapons
+        this.weapons = []; //Game adds created weapons to world
+
+        //Can collide with other players
+        this.friendly = true;
+
+        //BOUNDS
         //Circle bounds
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
 
         this.type = 'player';
+
+        //BEHAVIOUR
+        let self = this;
+        //Damaged
+        this.onCollide(function (entity) {
+            if (!entity.friendly) {
+                if (entity.damage !== undefined) {
+                    self.health = self.health - entity.damage;
+                    if (self.health <= 0) {
+                        self.kill();
+                    }
+                }
+            }
+        });
+
+        //Reload
+        this.onUpdate(function (dt) {
+            if (self.ammo < self.maxAmmo) {
+                self.cooldown = self.cooldown - dt;
+                if (self.cooldown <= 0) {
+                    self.cooldown = self.cooldownTime;
+                    self.ammo++; //Add ammo
+                }
+            }
+        });
+
+    }
+    
+    //Primary Attack Event
+    onAttackPrimary (func) {
+        this.events.on('attack_primary', func);
+    }
+    
+    attackPrimary (target) {
+        this.events.emit('attack_primary', target);
+    }
+    
+    //Secondary Attack Event
+    onAttackSecondary (func) {
+        this.events.on('attack_secondary', func);
+    }
+    
+    attackSecondary (target) {
+        this.events.emit('attack_secondary', target);
+    }
+
+    //Special Attack Event
+    onAttackSpecial (func) {
+        this.events.on('attack_special', func);
+    }
+
+    attackSpecial (target) {
+        this.events.emit('attack_special', target);
     }
 
     scrape () {
@@ -399,9 +526,45 @@ class Player extends Physics {
             y: this.y,
             a: this.a,
             id: this.id,
+            health: this.health/this.maxHealth,
+            charge: this.charge/this.maxCharge,
+            ammo: this.ammo,
             type: this.type,
             alive: this.alive
         }
+    }
+
+}
+
+//MAGE PLAYER CLASS
+class Mage extends Player {
+
+    constructor (x, y) {
+        super(x, y, 0.6, 80, 7, 100);
+
+        //ATTACK BEHAVIOUR
+        let self = this;
+        this.onAttackPrimary(function (target) {
+            if (self.ammo > 0) {
+                //Direction from centre to target vector
+                let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: self.x, y: self.y}), target));
+                let force = $VECTOR.pro(35000, dir);
+                let pos = $VECTOR.add($VECTOR.pro(1.5 * self.radius, dir), {x: self.x, y: self.y}); //Out of player bounds
+
+                let projectile = new Projectile(pos.x, pos.y, force);
+                //When projectile kills itself
+                projectile.onKill(function () {
+                    let index = self.weapons.indexOf(projectile);
+                    if (index > -1) {
+                        self.weapons.splice(index, 1);
+                    }
+                });
+                //Add to active weapons
+                self.weapons.push(projectile);
+
+                self.ammo--;
+            }
+        });
     }
 
 }
@@ -413,7 +576,8 @@ const $ENTITIES = {
     light: Light,
     phys: Physics,
     barrel: Barrel,
-    ply: Player
+    ply: Player,
+    mage: Mage
 };
 
 //CHECK IF ENTITY
