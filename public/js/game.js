@@ -426,12 +426,11 @@ class Barrel extends Dynamic {
     }
 
     init () {
-        let geo = new THREE.CylinderBufferGeometry(0.8, 0.8, 1.6);
-        geo.rotateX(Math.PI/2);
-        let mat = new THREE.MeshPhongMaterial({color: 0xa39375});
-        let obj = new THREE.Mesh(geo, mat);
-        obj.castShadow = true;
-        obj.receiveShadow = true;
+        let obj = objects['barrel'].clone();
+        obj.rotation.x = Math.PI/2;
+        obj.rotation.y = Math.PI;
+        obj.position.set(this.x, this.y, 0);
+        obj.scale.set(1,0.3,1);
         this.obj = obj;
         return obj;
     }
@@ -967,6 +966,11 @@ assetQueue.push({
     type: 'obj',
     location: 'models/mage.json',
     name: 'mage'
+});
+assetQueue.push({
+    type: 'obj',
+    location: 'models/barrel.json',
+    name: 'barrel'
 });
 
 loadAssets();
