@@ -10,7 +10,15 @@ const $BOUNDS = require('./bounds');
 const $EVENTS = require('./events.js');
 const $UUID   = require('uuid/v4');
 
-//BASE CLASS
+/*
+  ____           _____ ______    _____ _                _____ _____
+ |  _ \   /\    / ____|  ____|  / ____| |        /\    / ____/ ____|
+ | |_) | /  \  | (___ | |__    | |    | |       /  \  | (___| (___
+ |  _ < / /\ \  \___ \|  __|   | |    | |      / /\ \  \___ \\___ \
+ | |_) / ____ \ ____) | |____  | |____| |____ / ____ \ ____) |___) |
+ |____/_/    \_\_____/|______|  \_____|______/_/    \_\_____/_____/
+*/
+
 //Entity base class
 class Entity {
 
@@ -89,6 +97,15 @@ class Entity {
 
 }
 
+/*
+  ____           _____ _____ _____   ______ _   _ _______ _____
+ |  _ \   /\    / ____|_   _/ ____| |  ____| \ | |__   __/ ____|
+ | |_) | /  \  | (___   | || |      | |__  |  \| |  | | | (___
+ |  _ < / /\ \  \___ \  | || |      |  __| | . ` |  | |  \___ \
+ | |_) / ____ \ ____) |_| || |____  | |____| |\  |  | |  ____) |
+ |____/_/    \_\_____/|_____\_____| |______|_| \_|  |_| |_____/
+ */
+
 //WALL
 //For static, immovable rectangular objects
 class Wall extends Entity {
@@ -146,6 +163,15 @@ class Light extends Entity {
     }
 
 }
+
+/*
+  _____  _    ___     _______ _____ _____  _____
+ |  __ \| |  | \ \   / / ____|_   _/ ____|/ ____|
+ | |__) | |__| |\ \_/ / (___   | || |    | (___
+ |  ___/|  __  | \   / \___ \  | || |     \___ \
+ | |    | |  | |  | |  ____) |_| || |____ ____) |
+ |_|    |_|  |_|  |_| |_____/|_____\_____|_____/
+*/
 
 //PHYSICS
 //Using the metric system, 1u = 1m (roughly)
@@ -231,6 +257,7 @@ class Physics extends Entity {
                 }
                 //If dynamic collision
                 else {
+
                     //TODO THIS IS BROKEN
                     //Find impulse of other on self
                     let vel = collision.velocity;
@@ -250,6 +277,7 @@ class Physics extends Entity {
                     //I have no idea how to get other entities forces into the update cycle
                     //I could split the cycle into smaller chunks but I'd rather not
                     //That's the only solution I can see though.
+
                 }
 
             }
@@ -357,12 +385,12 @@ class Barrel extends Physics {
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
 
         //BEHAVIOUR
-        this.health = 30;
+        this.health = 2;
 
         let self = this;
         //Damaged
         this.onCollide(function (entity) {
-            if (entity.damage !== undefined && entity.damage > 0) {
+            if (entity.damage && entity.damage > 0) {
                 self.health = self.health - entity.damage;
                 if (self.health <= 0) {
                     self.kill();
@@ -385,6 +413,15 @@ class Barrel extends Physics {
 
 }
 
+/*
+ __          ________          _____   ____  _   _  _____
+ \ \        / /  ____|   /\   |  __ \ / __ \| \ | |/ ____|
+  \ \  /\  / /| |__     /  \  | |__) | |  | |  \| | (___
+   \ \/  \/ / |  __|   / /\ \ |  ___/| |  | | . ` |\___ \
+    \  /\  /  | |____ / ____ \| |    | |__| | |\  |____) |
+     \/  \/   |______/_/    \_\_|     \____/|_| \_|_____/
+ */
+
 //PROJECTILE CLASS
 //Fired by players and such to do damage
 class Projectile extends Physics {
@@ -400,10 +437,11 @@ class Projectile extends Physics {
         this.area = this.radius * this.radius; //Assume in cube
 
         //BEHAVIOUR
-        this.damage = damage || 5;
-        this.friendly = false;
+        this.damage = damage || 1;
+        this.friendly = true;
 
         this.lifespan = lifespan || 2000; //ms
+        this.colCount = 1; //Number of collisions before death
 
         //Kill when lifespan exceeded
         let self = this;
@@ -415,7 +453,10 @@ class Projectile extends Physics {
         });
 
         this.onCollide(function () {
-            self.kill();
+            if (self.colCount <= 0) {
+                self.kill();
+            }
+            self.colCount--;
         });
 
         //BOUNDS
@@ -428,7 +469,6 @@ class Projectile extends Physics {
         return {
             x: this.x,
             y: this.y,
-            //r: this.r,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -437,8 +477,169 @@ class Projectile extends Physics {
 
 }
 
+/*
+  ______ _   _ ______ __  __ _____ ______  _____
+ |  ____| \ | |  ____|  \/  |_   _|  ____|/ ____|
+ | |__  |  \| | |__  | \  / | | | | |__  | (___
+ |  __| | . ` |  __| | |\/| | | | |  __|  \___ \
+ | |____| |\  | |____| |  | |_| |_| |____ ____) |
+ |______|_| \_|______|_|  |_|_____|______|_____/
+ */
 
-//PLAYER CLASS
+//ENEMY AI STATES
+//Used client-side for animation
+const $AI_STATES = {
+    still: 0,
+    follow: 1,
+    flee: 2
+};
+
+//ENEMY BASE CLASS
+class Enemy extends Physics {
+
+    constructor (x, y, mass, force, health, follow, flee) {
+        super(x, y);
+
+        //PHYSICS
+        this.mass   = mass  || this.mass;
+        this.force  = force || 800; //Magnitude of driving force
+
+        //DEFAULTS
+        this.maxHealth = health || 3;
+        this.health    = health || 3;
+
+        //BEHAVIOUR
+        this.friendly  = false;
+        this.damage    = 1;
+        this.follow    = new $BOUNDS.bounds.circle(x, y, follow || 12); //Circle bounds to tell if players inside
+        this.flee      = flee || 0;  //Radius of enemies to flee
+        this.minHealth = 0; //If health falls below, flee
+
+        //Active weapons
+        this.weapons = [];
+
+        this.state = $AI_STATES.still; //Enum indicating how the enemy should behave
+
+        let self = this;
+        //Damage
+        this.onCollide(function (entity) {
+            //Damage from a player weapon
+            if (entity.friendly && entity.damage) {
+                self.health = self.health - entity.damage;
+                if (self.health <= 0) {
+                    self.kill();
+                }
+            }
+        });
+
+        //Update follow bounds after move
+        this.onUpdate(function () {
+            self.follow.x = self.x;
+            self.follow.y = self.y;
+        });
+
+        //Receive players in follow radius
+        this.onAction(function (players) {
+            if (players.length > 0) {
+                let min = self.follow.radius + 1; //Min distance
+                let nearest; //Nearest player
+
+                //Find nearest player
+                for (let i = 0; i < players.length; i++) {
+                    let ply = players[i];
+                    let dir = $VECTOR.add({x: ply.x, y: ply.y}, $VECTOR.pro(-1, {x: self.x, y: self.y}));
+
+                    let dist = $VECTOR.mag(dir);
+                    if (dist < min) {
+                        min = dist;
+                        nearest = ply;
+                    }
+                }
+
+                //Add force in direction of nearest player
+                let dir = $VECTOR.add({x: nearest.x, y: nearest.y}, $VECTOR.pro(-1, {x: self.x, y: self.y}));
+                dir = $VECTOR.nrm(dir); //Normalise
+
+                //Flee if nearest is below flee radius
+                if (min <= self.flee) {
+                    self.state = $AI_STATES.flee;
+                    dir = $VECTOR.pro(-1, dir); //Move away from nearest player
+                }
+                else {
+                    self.state = $AI_STATES.follow;
+                }
+
+                let force = $VECTOR.pro(dir, self.force);
+                self.forces.push(force);
+
+                //Look at target
+                dir.x = dir.x * -1; //Not sure why I have to do this
+                self.a = $VECTOR.ang(dir);
+            }
+            else {
+                self.state = $AI_STATES.still;
+            }
+        });
+
+        this.type = 'enemy'
+    }
+
+    //WHAT THE AI WILL DO
+    onAction (func) {
+        this.events.on('action', func);
+    }
+
+    action (players) {
+        this.events.emit('action', players);
+    }
+
+    //No scrape, this should never be sent to client
+
+}
+
+//WOLF
+//Simplest enemy
+class Wolf extends Enemy {
+
+    constructor (x, y) {
+        super(x, y, 60, 1000);
+        //PHYSICS
+        this.radius = 0.5;
+        this.mass   = 65;
+
+        //Area for drag
+        this.area = this.radius * this.radius;
+
+        //BOUNDS
+        this.bounds = new $BOUNDS.bounds.circle(x, y, this.radius);
+
+        this.type = 'wolf';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            a: this.a,
+            state: this.state,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+/*
+  _____  _           __     ________ _____   _____
+ |  __ \| |        /\\ \   / /  ____|  __ \ / ____|
+ | |__) | |       /  \\ \_/ /| |__  | |__) | (___
+ |  ___/| |      / /\ \\   / |  __| |  _  / \___ \
+ | |    | |____ / ____ \| |  | |____| | \ \ ____) |
+ |_|    |______/_/    \_\_|  |______|_|  \_\_____/
+*/
+
+//PLAYER BASE CLASS
 class Player extends Physics {
 
     constructor (x, y, r, health, ammo, charge) {
@@ -452,12 +653,12 @@ class Player extends Physics {
         this.mass = this.radius * this.radius * Math.PI * 74;
 
         //Area for drag
-        this.area = this.radius * this.radius; //Assume in cube
+        this.area = this.radius * this.radius;
 
         //DEFAULTS
         //Player health
-        this.maxHealth = health || 100;
-        this.health    = health || 100;
+        this.maxHealth = health || 10;
+        this.health    = health || 10;
 
         //Player special charge
         this.maxCharge = charge || 100;
@@ -487,12 +688,10 @@ class Player extends Physics {
         let self = this;
         //Damaged
         this.onCollide(function (entity) {
-            if (!entity.friendly) {
-                if (entity.damage !== undefined) {
-                    self.health = self.health - entity.damage;
-                    if (self.health <= 0) {
-                        self.kill();
-                    }
+            if (!entity.friendly && entity.damage) {
+                self.health = self.health - entity.damage;
+                if (self.health <= 0) {
+                    self.kill();
                 }
             }
         });
@@ -545,7 +744,7 @@ class Player extends Physics {
 class Mage extends Player {
 
     constructor (x, y) {
-        super(x, y, 0.6, 80, 7, 100);
+        super(x, y, 0.6, 8, 7, 100);
 
         //ATTACK BEHAVIOUR
         let self = this;
@@ -591,22 +790,35 @@ class Mage extends Player {
 
 }
 
+/*
+  ________   _______   ____  _____ _______ _____
+ |  ____\ \ / /  __ \ / __ \|  __ \__   __/ ____|
+ | |__   \ V /| |__) | |  | | |__) | | | | (___
+ |  __|   > < |  ___/| |  | |  _  /  | |  \___ \
+ | |____ / . \| |    | |__| | | \ \  | |  ____) |
+ |______/_/ \_\_|     \____/|_|  \_\ |_| |_____/
+ */
+
 //ALL ENTITIES
 const $ENTITIES = {
+    //BASIC
     entity: Entity,
     wall: Wall,
     light: Light,
     phys: Physics,
     barrel: Barrel,
-    ply: Player,
-    mage: Mage
+
+    //PLAYERS
+    players: {
+        ply: Player,
+        mage: Mage
+    },
+
+    //ENEMIES
+    enemies: {
+        enemy: Enemy,
+        wolf: Wolf
+    }
 };
 
-//CHECK IF ENTITY
-const $IS_ENTITY = function (entity) {
-    return $ENTITIES[entity.type] !== undefined;
-};
-
-//EXPORTS
-exports.ents = $ENTITIES;
-exports.isEnt = $IS_ENTITY;
+module.exports = $ENTITIES;
