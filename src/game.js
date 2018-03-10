@@ -11,10 +11,10 @@ const $EVENTS = require('./events.js').handler;
 const $WORLD  = require('./world.js');
 const $VECTOR = require('./general.js').vector;
 const $GEN    = require('./worldgen.js');
+const $BOUNDS = require('./bounds.js');
 
 //PARAMETERS
 const $DEFAULT_PARAMS = {
-    max_entities: 50,
     max_players: 8,
     world_width: 72,
     world_height: 72
@@ -29,12 +29,44 @@ class Game {
 
         let worldGen = new $GEN(this.args.world_width, this.args.world_height);
         this.world = worldGen.generate();
+        this.enemies = worldGen.enemies;
         this.spawn = worldGen.graph.nodes[0].pos;
 
         this.changed = []; //Entities changed since last update
         
         let self = this;
-        this.world.onUpdate(function(changed){
+        //AI behaviour
+        this.world.onUpdate(function () {
+            //Get bounds lists
+            let plyBounds = [];
+            let enemyBounds = [];
+
+            //Players...
+            for (let i = 0; i < self.players.length; i++) {
+                plyBounds.push(self.players[i].entity); //Since bounds uses entity and entity bounds
+            }
+
+            //Enemies...
+            for (let i = 0; i < self.enemies.length; i++) {
+                let enemy = self.enemies[i];
+                enemyBounds.push({ent: enemy, players: [], bounds: enemy.follow}); //So that follow bounds are used
+            }
+
+            //Collide player and enemy bounds with enemies as the specific
+            let collisions = $BOUNDS.getCollisions(plyBounds, enemyBounds);
+            for (let i = 0; i < collisions.length; i++) {
+                //Specific from bounds is always index 1 in pairs
+                collisions[i][1].players.push(collisions[i][0]);
+            }
+
+            //Trigger action event on enemies
+            for (let i = 0; i < enemyBounds.length; i++) {
+                enemyBounds[i].ent.action(enemyBounds[i].players); //Pass collided players as parameter
+            }
+        });
+
+        //Get changed entities
+        this.world.onUpdate(function (changed) {
             //Merge together due to sync issues
             for (let i = 0; i < changed.length; i++) {
                 let index = self.changed.indexOf(changed[i]);
@@ -89,19 +121,13 @@ class Game {
         }
     }
 
-    addWalls (walls) {
-        for (let i = 0; i < walls.length; i++) {
-            let bp = walls[i]; //blueprint
-            let wall = new $ENTITY.ents.wall(bp.x, bp.y, bp.w, bp.h);
-            this.world.queueChild(wall);
-        }
-    }
-
+    //STARTS THE GAME
     start () {
         console.log('> Starting Game');
         this.running = true;
         this.world.start();
 
+        //SEND WORLD TO PLAYERS
         let scrapedWorld = this.world.scrapeAll();
         for (let i = 0; i < this.players.length; i++) {
             let ply = this.players[i];
@@ -133,51 +159,54 @@ class Game {
                 for (let i = 0; i < plys.length; i++) {
                     let ply = plys[i];
 
-                    //MOUSE TARGET
-                    let target = ply.mouse;
-                    if (ply.mouse.x !== 0 && ply.mouse.y !== 0) {
-                        //ROTATE
-                        let pos = {x: ply.entity.x, y: ply.entity.y};
-                        let dir = $VECTOR.add($VECTOR.pro(-1, pos), ply.mouse);
-                        dir.x = dir.x * -1; //Not sure why I have to do this
-                        ply.entity.angle = $VECTOR.ang(dir);
-                    }
-
-                    //KEYS
-                    let dir = {x: 0, y: 0};
-                    for (let j = 0; j < ply.keys.length; j++) {
-                        switch (ply.keys[j]) {
-                            case 'KeyW':
-                                dir = $VECTOR.add(dir, {x: 0, y: 1});
-                                break;
-                            case 'KeyS':
-                                dir = $VECTOR.add(dir, {x: 0, y: -1});
-                                break;
-                            case 'KeyA':
-                                dir = $VECTOR.add(dir, {x: -1, y: 0});
-                                break;
-                            case 'KeyD':
-                                dir = $VECTOR.add(dir, {x: 1, y: 0});
-                                break;
+                    //If the player has an entity to update
+                    if (ply.entity) {
+                        //MOUSE TARGET
+                        let target = ply.mouse;
+                        if (ply.mouse.x !== 0 && ply.mouse.y !== 0) {
+                            //ROTATE
+                            let pos = {x: ply.entity.x, y: ply.entity.y};
+                            let dir = $VECTOR.add($VECTOR.pro(-1, pos), ply.mouse);
+                            dir.x = dir.x * -1; //Not sure why I have to do this
+                            ply.entity.angle = $VECTOR.ang(dir);
                         }
-                    }
-                    if (dir.x !== 0 || dir.y !== 0) {
-                        dir = $VECTOR.nrm(dir);
-                        let force = $VECTOR.pro(1300, dir);
 
-                        ply.entity.forces.push(force);
-                    }
+                        //KEYS
+                        let dir = {x: 0, y: 0};
+                        for (let j = 0; j < ply.keys.length; j++) {
+                            switch (ply.keys[j]) {
+                                case 'KeyW':
+                                    dir = $VECTOR.add(dir, {x: 0, y: 1});
+                                    break;
+                                case 'KeyS':
+                                    dir = $VECTOR.add(dir, {x: 0, y: -1});
+                                    break;
+                                case 'KeyA':
+                                    dir = $VECTOR.add(dir, {x: -1, y: 0});
+                                    break;
+                                case 'KeyD':
+                                    dir = $VECTOR.add(dir, {x: 1, y: 0});
+                                    break;
+                            }
+                        }
+                        if (dir.x !== 0 || dir.y !== 0) {
+                            dir = $VECTOR.nrm(dir);
+                            let force = $VECTOR.pro(1300, dir);
 
-                    //MOUSE BTNS
-                    for (let j = 0; j < ply.btns.length; j++) {
-                        switch (ply.btns[j]) {
-                            case 'Mouse0':
-                                ply.entity.attackPrimary(target);
-                                //Add latest weapon to world
-                                if (ply.entity.weapons.length > 0) {
-                                    self.world.addChild(ply.entity.weapons[ply.entity.weapons.length-1]);
-                                }
-                                break;
+                            ply.entity.forces.push(force);
+                        }
+
+                        //MOUSE BTNS
+                        for (let j = 0; j < ply.btns.length; j++) {
+                            switch (ply.btns[j]) {
+                                case 'Mouse0':
+                                    ply.entity.attackPrimary(target);
+                                    //Add latest weapon to world
+                                    if (ply.entity.weapons.length > 0) {
+                                        self.world.addChild(ply.entity.weapons[ply.entity.weapons.length - 1]);
+                                    }
+                                    break;
+                            }
                         }
                     }
                     //Reset btns so no 'double tap' due to fast update time
@@ -189,6 +218,7 @@ class Game {
         setTimeout(updatePlayer, 15);
     }
 
+    //STOPS (PAUSES) THE GAME
     stop () {
         console.log('> Stopping Game');
         this.running = false;
