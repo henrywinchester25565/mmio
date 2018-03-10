@@ -442,18 +442,34 @@ class Barrel extends Dynamic {
 }
 entities[Barrel.type] = Barrel;
 
-//PLAYER GAME CLASSES
-const plyClasses = {
-    default: {
-        type: 'default',
-        asset: 'ply_class_default',
-        stats: {
-            health: 100,
-            stamina: 100,
-            ammo: 3
-        }
+//WOLF CLASS
+class Wolf extends Dynamic {
+
+    static get type () {
+        return 'wolf';
     }
-};
+
+    constructor (id, x, y, a) {
+        super (id, x, y, a);
+    }
+
+    init () {
+        let geo = new THREE.CylinderBufferGeometry(0.5, 0.5, 1);
+        geo.rotateX(Math.PI/2);
+        let mat = new THREE.MeshBasicMaterial({color: 0xef56b4});
+        let obj = new THREE.Mesh(geo, mat);
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        this.obj = obj;
+        return obj;
+    }
+
+    static fromScrape (scrape) {
+        return new Wolf(scrape.id, scrape.x, scrape.y, scrape.a);
+    }
+
+}
+entities[Wolf.type] = Wolf;
 
 //PLAYER TOKEN CLASS
 let colors = [0x5092fc, 0xe82c57, 0x46ce37, 0xef56b4, 0xffffff];
@@ -708,7 +724,12 @@ class World {
     //Delete from world
     removeChild (id) {
         if (this.children.hasOwnProperty(id)) {
-            this.scene.remove(this.children[id].obj);
+            //If removing being called quickly, sometimes doesn't work, so repeat until it does
+            while (this.scene.getObjectById(this.children[id].obj.id)) {
+                console.log(id);
+                this.scene.remove(this.children[id].obj);
+            }
+            console.log(this.scene.getObjectById(this.children[id].obj.id) !== undefined);
             delete this.children[id];
         }
     }
