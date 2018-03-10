@@ -6,7 +6,6 @@ console.log("Loaded: world.js");
 
 //REQUIREMENTS
 const $BOUNDS = require('./bounds.js');
-const $ENTITY = require('./entity.js');
 const $EVENTS = require('./events.js');
 
 //PARAMETERS
