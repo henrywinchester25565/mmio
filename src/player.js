@@ -7,19 +7,6 @@ console.log("Loaded: player.js");
 //REQUIREMENTS
 const $ENTITY = require('./entity.js');
 
-//CLASSES
-const $CLASSES = {
-    default: {
-        type: 'default',
-        stats: {
-            speed: 1,
-            health: 100,
-            stamina: 100,
-            manna: 100
-        }
-    }
-};
-
 //PLAYER CLASS FOR PLAYER HANDLING
 class Player {
     constructor (socket, username, plyClass) {
@@ -29,8 +16,8 @@ class Player {
         this.nick   = username;
 
         //INPUT
-        this.keys = [];
-        this.btns = [];
+        this.keys  = [];
+        this.btns  = [];
         this.mouse = {x: 0, y: 0};
 
         let self = this;
@@ -67,12 +54,13 @@ class Player {
 
         //PLAYER DATA
         this.inventory = [];
-        this.plyClass = plyClass;
-        this.stats = {};
-        Object.assign(this.stats, this.plyClass.stats);
-        this.xp = 0;
+        this.plyClass  = plyClass || 'mage';
+        this.stats     = {};
+        this.xp        = 0;
 
-        this.entity = new $ENTITY.ents.mage(2,2);
+        //Player entity
+        this.entity      = new $ENTITY.players[this.plyClass](2,2);
+        this.entity.nick = this.nick;
 
         this.socket.emit('ply', this.entity.scrape());
     }
@@ -80,5 +68,4 @@ class Player {
 }
 
 //EXPORTS
-exports.player  = Player;
-exports.classes = $CLASSES;
+module.exports = Player;
