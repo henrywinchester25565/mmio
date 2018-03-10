@@ -70,7 +70,11 @@ const $USERNAMES = [];
 const $PLY_CONNECT = function (socket) {
     console.log('Connection: ' + socket.id);
 
+    //New game when players first join
     if ($USERNAMES.length === 0) {
+        if (game !== undefined) {
+            game.stop();
+        }
         game = new $GAME();
         game.start();
     }
@@ -80,7 +84,7 @@ const $PLY_CONNECT = function (socket) {
         if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
             $USERNAMES.push(username);
             //Create player
-            let ply = new $PLAYER.player(socket, username, $PLAYER.classes.default);
+            let ply = new $PLAYER(socket, username);
             $PLAYERS[ply.id] = ply;
             socket.emit('ready');
 
