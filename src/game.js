@@ -43,13 +43,24 @@ class Game {
 
             //Players...
             for (let i = 0; i < self.players.length; i++) {
-                plyBounds.push(self.players[i].entity); //Since bounds uses entity and entity bounds
+                if (self.players[i].entity.alive) {
+                    plyBounds.push(self.players[i].entity); //Since bounds uses entity and entity bounds
+                }
             }
 
             //Enemies...
             for (let i = 0; i < self.enemies.length; i++) {
                 let enemy = self.enemies[i];
-                enemyBounds.push({ent: enemy, players: [], bounds: enemy.follow}); //So that follow bounds are used
+                if (enemy.alive) {
+                    enemyBounds.push({ent: enemy, players: [], bounds: enemy.follow}); //So that follow bounds are used
+                }
+                //Cleanup dead enemies from world gen
+                else {
+                    let index = self.enemies.indexOf(enemy);
+                    if (index > -1) {
+                        self.enemies.splice(index, 1);
+                    }
+                }
             }
 
             //Collide player and enemy bounds with enemies as the specific
