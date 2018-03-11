@@ -394,7 +394,13 @@ class Physics extends Dynamic {
     }
 
     constructor (id, x, y) {
-        super (id, x, y);
+        super(id, x, y);
+
+        let self = this;
+        this.events.on('kill', function () {
+            self.obj.geometry.dispose();
+            self.obj.material.dispose();
+        });
     }
 
     init () {
@@ -423,6 +429,8 @@ class Barrel extends Dynamic {
 
     constructor (id, x, y) {
         super(id, x, y);
+
+        let self = this;
     }
 
     init () {
@@ -454,12 +462,13 @@ class Wolf extends Dynamic {
     }
 
     init () {
-        let geo = new THREE.CylinderBufferGeometry(0.5, 0.5, 1);
-        geo.rotateX(Math.PI/2);
-        let mat = new THREE.MeshBasicMaterial({color: 0xef56b4});
-        let obj = new THREE.Mesh(geo, mat);
-        obj.castShadow = true;
-        obj.receiveShadow = true;
+        let wolf = objects['wolf'].clone();
+        wolf.rotation.x = Math.PI/2;
+        wolf.rotation.y = Math.PI;
+
+        let obj = new THREE.Group(); //So it rotates properly
+        obj.add(wolf);
+        obj.position.set(this.x, this.y, 0);
         this.obj = obj;
         return obj;
     }
@@ -472,7 +481,8 @@ class Wolf extends Dynamic {
 entities[Wolf.type] = Wolf;
 
 //PLAYER TOKEN CLASS
-let colors = [0x5092fc, 0xe82c57, 0x46ce37, 0xef56b4, 0xffffff];
+//0xef56b4
+let colors = [0x5092fc, 0x46ce37, 0xffffff];
 class Player extends Dynamic {
 
     static get type () {
@@ -509,7 +519,7 @@ class Player extends Dynamic {
         light.shadow.mapSize.width = 1024;
         light.shadow.mapSize.height = 1024;
         light.castShadow = true;
-        light.position.z = 2;
+        light.position.z = 2.3;
         light.name = 'light';
         group.add(light);
 
@@ -992,6 +1002,11 @@ assetQueue.push({
     type: 'obj',
     location: 'models/barrel.json',
     name: 'barrel'
+});
+assetQueue.push({
+    type: 'obj',
+    location: 'models/wolf.json',
+    name: 'wolf'
 });
 
 loadAssets();
