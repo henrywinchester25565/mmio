@@ -339,6 +339,7 @@ class Dynamic extends Entity {
         super (id, x, y);
 
         this.a = angle || 0;
+        this.health = 1; //Percentage
 
         //INTERPOLATION
         this.end = {x: this.x, y: this.y, a: this.a};
@@ -362,6 +363,11 @@ class Dynamic extends Entity {
             self.vel.y = (self.end.y - self.y)/updateTime;
             self.vel.a = (self.end.a - self.a)/updateTime;
 
+            if (self.health !== scrape.health) {
+                let health = self.health;
+                self.health = scrape.health || 1;
+                self.events.emit('dHealth', self.health - health); //changed health
+            }
         });
 
         this.events.on('draw', function (dt) {
@@ -374,8 +380,25 @@ class Dynamic extends Entity {
             self.obj.position.x = self.x;
             self.obj.position.y = self.y;
             self.obj.rotation.z = self.a;
-
         });
+
+        //Draw health bar
+        this.events.on('hud', function (camera) {
+            if (self.health < 1) {
+                let pos2D = camera.positionToCamera(self.x, self.y, 0);
+                let ctx = camera.hudMap;
+                ctx.fillStyle = "#ffffff";
+                let w = (800*self.health)/camera.z;
+                let h = 100/camera.z;
+                let x = pos2D.x - w/2;
+                let y = pos2D.y + h*5;
+                ctx.fillRect(x, y, w, h);
+            }
+        });
+    }
+
+    hud (camera) {
+        this.events.emit('hud', camera);
     }
 
     static fromScrape (scrape) {
@@ -398,6 +421,7 @@ class Physics extends Dynamic {
 
         let self = this;
         this.events.on('kill', function () {
+            self.obj.material.emissiveIntensity = 0;
             self.obj.geometry.dispose();
             self.obj.material.dispose();
         });
@@ -406,8 +430,9 @@ class Physics extends Dynamic {
     init () {
         let geo = new THREE.CylinderBufferGeometry(0.15, 0.15, 0.3);
         geo.rotateX(Math.PI/2);
-        let mat = new THREE.MeshBasicMaterial({color: 0xff0000});
+        let mat = new THREE.MeshPhongMaterial();
         let obj = new THREE.Mesh(geo, mat);
+        obj.receiveShadow = true;
         this.obj = obj;
         return obj;
     }
@@ -489,23 +514,26 @@ class Player extends Dynamic {
         return 'player';
     }
 
-    constructor (id, x, y, a) {
+    constructor (id, x, y, a, nick) {
         super(id, x, y, a);
-        this.health = 1;
+        this.nick = nick;
 
         let self = this;
-        this.events.on('update', function (scrape) {
-            if (self.health !== scrape.health) {
-                self.health = scrape.health;
-                let light = self.obj.getObjectByName('light');
-                light.intensity = self.health;
-                light.distance = 30 * self.health;
-            }
-
+        this.events.on('dHealth', function () {
+            let light = self.obj.getObjectByName('light');
+            light.intensity = self.health;
+            light.distance = 30 * self.health;
         });
 
-        this.events.on('kill', function () {
-            console.log('killed');
+        //Nickname
+        this.events.on('hud', function (camera) {
+            let pos2D = camera.positionToCamera(self.x, self.y, 0);
+            let ctx = camera.hudMap;
+            ctx.fillStyle = "#ffffff";
+            ctx.font = 'Normal Bold '+320/camera.z+'px Garamond';
+            let x = pos2D.x;
+            let y = pos2D.y - (700/camera.z);
+            ctx.fillText(self.nick, x, y);
         });
     }
 
@@ -538,7 +566,7 @@ class Player extends Dynamic {
     }
 
     static fromScrape (scrape) {
-        return new Player(scrape.id, scrape.x, scrape.y, scrape.a)
+        return new Player(scrape.id, scrape.x, scrape.y, scrape.a, scrape.nick)
     }
 
 }
@@ -625,11 +653,26 @@ class Camera {
         this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
         this.renderer.setSize(this.width, this.height);
         this.html = this.renderer.domElement;
 
         this.camera = new THREE.PerspectiveCamera(fov, this.width/this.height, 0.1, 1000);
         this.update();
+
+        //HEADS UP DISPLAY (HUD)
+        //Renders bitmap images onto canvas and renders over the top of 3D camera
+        //Adapted from https://www.evermade.fi/pure-three-js-hud/
+        this.hudCanvas = document.createElement('canvas');
+        this.hudCanvas.style.position = 'relative';
+        this.hudCanvas.style.top      = (this.height * -1) + 'px';
+        this.hudCanvas.style.zIndex  = '1000';
+
+        this.hudCanvas.width  = this.width;
+        this.hudCanvas.height = this.height;
+        this.hudMap           = this.hudCanvas.getContext('2d');
+
+        this.hudMap.textAlign = 'center';
 
         //When the window is resized...
         let self = this;
@@ -640,9 +683,23 @@ class Camera {
             self.camera.aspect = self.width / self.height;
             self.camera.updateProjectionMatrix();
 
+            self.hudCanvas.width = self.width;
+            self.hudCanvas.height = self.height;
+            self.hudCanvas.style.top = (self.height * -1) + 'px';
+
             self.renderer.setSize(self.width, self.height);
         }, false);
+    }
 
+    //For HUD rendering
+    positionToCamera (x, y, z) {
+        //3D position to Camera
+        let pos = new THREE.Vector3(x, y, z);
+        let vector = pos.project(this.camera);
+
+        vector.x = (vector.x + 1) / 2 * this.width;
+        vector.y = -(vector.y - 1) / 2 * this.height;
+        return vector;
     }
 
     update () {
@@ -658,6 +715,7 @@ class Camera {
     }
 
     render () {
+        //3D
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -736,10 +794,8 @@ class World {
         if (this.children.hasOwnProperty(id)) {
             //If removing being called quickly, sometimes doesn't work, so repeat until it does
             while (this.scene.getObjectById(this.children[id].obj.id)) {
-                console.log(id);
                 this.scene.remove(this.children[id].obj);
             }
-            console.log(this.scene.getObjectById(this.children[id].obj.id) !== undefined);
             delete this.children[id];
         }
     }
@@ -765,6 +821,7 @@ class World {
             if (self.running) {
 
                 requestAnimationFrame(animate);
+                self.camera.hudMap.clearRect(0, 0, self.camera.width, self.camera.height);
 
                 let children = self.getChildren();
                 for (let i = 0; i < children.length; i++) {
@@ -791,6 +848,14 @@ class World {
 
                 self.camera.update();
                 self.camera.render();
+
+                //Render HUD
+                for (let i = 0; i < children.length; i++) {
+                    if (children[i].alive && children[i].hud) {
+                        //Render HUD Elements
+                        children[i].hud(self.camera);
+                    }
+                }
 
             }
         };
@@ -897,6 +962,7 @@ function worldInit (scrape) {
     player = world.children[plyId];
     world.target = player;
     document.getElementById('render').appendChild(world.camera.html);
+    document.getElementById('render').appendChild(world.camera.hudCanvas);
 
     socket.on('update', update);
 }
@@ -923,7 +989,7 @@ function init () {
     */
 
     socket.on('username', function () {
-        socket.emit('username', Math.random());
+        socket.emit('username', Math.floor(30*Math.random()));
     });
     
     //INITIALISE WORLD
