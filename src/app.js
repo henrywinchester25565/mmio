@@ -70,19 +70,26 @@ const $USERNAMES = [];
 const $PLY_CONNECT = function (socket) {
     console.log('Connection: ' + socket.id);
 
-    //New game when players first join
-    if ($USERNAMES.length === 0) {
-        if (game !== undefined) {
-            game.stop();
-        }
-        game = new $GAME();
-        game.start();
-    }
-
     socket.emit('username');
-    socket.on('username', function (username) {
+    let handleUsername = function (username) {
         if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
+            //Stop listening for username's after good one
+            socket.removeListener('username', handleUsername);
+
+            //New game when players first join
+            if ($USERNAMES.length === 0) {
+                if (game !== undefined) {
+                    game.stop();
+                }
+                game = new $GAME();
+                game.start();
+            }
+
+            console.log(username);
+
+            //Add username to array of username's
             $USERNAMES.push(username);
+            socket.emit('username_ok'); //Username is good
             //Create player
             let ply = new $PLAYER(socket, username);
             $PLAYERS[ply.id] = ply;
@@ -92,9 +99,10 @@ const $PLY_CONNECT = function (socket) {
             game.addPlayer(ply);
         }
         else {
-            socket.emit('username');
+            socket.emit('username_bad'); //Username not good
         }
-    });
+    };
+    socket.on('username', handleUsername);
 };
 
 const $PLY_DISCONNECT = function (socket) {
