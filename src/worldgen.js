@@ -245,7 +245,8 @@ const $PAINT = {
     void: '.',
     path: ' ',
     wall: '##',
-    barrel: 'O '
+    barrel: 'O ',
+    wolf: 'W'
 };
 
 //CARDINAL DIRECTIONS
@@ -267,6 +268,8 @@ class WorldGen {
         this.minLength = min - min%3 +2|| 2*3+2;
         this.maxLength = max - max%3 +2|| 7*3+2;
         this.minEdges  = edg           || 30;
+
+        this.enemies = [];
     }
 
     drawGraph (value) {
@@ -889,7 +892,7 @@ class WorldGen {
                             let yMin = pos.y < end.y ? pos.y : end.y;
                             let w = Math.abs(pos.x - end.x) + 1;
                             let h = Math.abs(pos.y - end.y) + 1;
-                            let wall = new $ENTITY.ents.wall(xMin, yMin, w, h);
+                            let wall = new $ENTITY.wall(xMin, yMin, w, h);
                             world.queueChild(wall);
                         }
                     }
@@ -919,8 +922,34 @@ class WorldGen {
                 }
             }
             this.canvas.canvas[pos.x][pos.y] = $PAINT.barrel;
-            let barrel = new $ENTITY.ents.barrel(pos.x, pos.y);
+            let barrel = new $ENTITY.barrel(pos.x, pos.y);
             world.queueChild(barrel);
+        }
+
+        //Add enemies
+        let enemies = Math.random() * this.graph.edges.length * 1.5;
+        for (let i = 0; i < enemies; i++) {
+            pos = {x: 0, y: 0};
+            let walls = false;
+            while (this.canvas.canvas[pos.x][pos.y] !== $PAINT.path || walls) {
+                pos.x = Math.floor(Math.random() * (this.w-1));
+                pos.y = Math.floor(Math.random() * (this.h-1));
+
+                //No adjacent walls
+                walls = false;
+                for (let direction in $DIR) {
+                    if ($DIR.hasOwnProperty(direction)) {
+                        let check = $VECTOR.add($DIR[direction], pos);
+                        if (this.canvas.inCanvas(check) && this.canvas.canvas[check.x][check.y] !== $PAINT.path) {
+                            walls = true;
+                        }
+                    }
+                }
+            }
+            this.canvas.canvas[pos.x][pos.y] = $PAINT.wolf;
+            let wolf = new $ENTITY.enemies.wolf(pos.x, pos.y);
+            this.enemies.push(wolf);
+            world.queueChild(wolf);
         }
 
         this.canvas.print();
