@@ -445,6 +445,8 @@ class Projectile extends Physics {
         this.lifespan = lifespan || 2000; //ms
         this.colCount = 1; //Number of collisions before death
 
+        this.source = undefined; //Placed here for doc reasons - know there is a property called source
+
         //Kill when lifespan exceeded
         let self = this;
         this.onUpdate(function (dt) {
@@ -516,6 +518,7 @@ class Enemy extends Physics {
         this.follow    = new $BOUNDS.bounds.circle(x, y, follow || 12); //Circle bounds to tell if players inside
         this.flee      = flee || 0;  //Radius of enemies to flee
         this.minHealth = 0; //If health falls below, flee
+        this.xp        = 10;
 
         //Active weapons
         this.weapons = [];
@@ -529,7 +532,17 @@ class Enemy extends Physics {
             if (entity.friendly && entity.damage) {
                 self.health = self.health - entity.damage;
                 if (self.health <= 0) {
+                    //Give player charge equal to xp worth
+                    if (entity.source) {
+                        entity.source.gainXP(self.xp);
+                    }
                     self.kill();
+                }
+                else {
+                    //Give player charge - 5 for hit
+                    if (entity.source) {
+                        entity.source.gainXP(5);
+                    }
                 }
             }
         });
@@ -664,6 +677,9 @@ class Player extends Physics {
         this.area = this.radius * this.radius;
 
         //DEFAULTS
+        //XP gained over play
+        this.xp = 0;
+
         //Player health
         this.maxHealth = health || 10;
         this.health    = health || 10;
@@ -746,6 +762,13 @@ class Player extends Physics {
         this.events.emit('attack_special', target);
     }
 
+    //xp
+    gainXP (xp) {
+        this.xp = this.xp + xp;
+        let charge = this.charge + xp;
+        this.charge = charge >= this.maxCharge ? this.maxCharge : charge; //Cap charge
+    }
+
     scrape () {
         return {
             x: this.x,
@@ -755,7 +778,7 @@ class Player extends Physics {
             nick: this.nick,
             health: this.health/this.maxHealth,
             charge: this.charge/this.maxCharge,
-            ammo: this.ammo,
+            ammo: this.ammo/this.maxAmmo,
             type: this.type,
             alive: this.alive
         }
@@ -779,6 +802,7 @@ class Mage extends Player {
                 let pos = $VECTOR.add($VECTOR.pro(1.5 * self.radius, dir), {x: self.x, y: self.y}); //Out of player bounds
 
                 let projectile = new Projectile(pos.x, pos.y, force);
+                projectile.source = self;
                 //When projectile kills itself
                 projectile.onKill(function () {
                     let index = self.weapons.indexOf(projectile);
