@@ -341,6 +341,9 @@ class Dynamic extends Entity {
         this.a = angle || 0;
         this.health = 1; //Percentage
 
+        //hud radius = hudRadius/camera.z
+        this.hudRadius = 500;
+
         //INTERPOLATION
         this.end = {x: this.x, y: this.y, a: this.a};
         this.vel = {x: 0, y: 0, a: 0};
@@ -387,12 +390,16 @@ class Dynamic extends Entity {
             if (self.health < 1) {
                 let pos2D = camera.positionToCamera(self.x, self.y, 0);
                 let ctx = camera.hudMap;
-                ctx.fillStyle = "#ffffff";
-                let w = (800*self.health)/camera.z;
-                let h = 100/camera.z;
-                let x = pos2D.x - w/2;
-                let y = pos2D.y + h*5;
-                ctx.fillRect(x, y, w, h);
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth   = 100/camera.z;
+
+                ctx.beginPath();
+                let angle = (Math.PI*2)/3 - (self.health * Math.PI * 2/3);
+                let start = Math.PI/6 + angle/2;
+                let end   = (Math.PI * 5)/6 - angle/2;
+                ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
+                ctx.stroke();
             }
         });
     }
@@ -518,7 +525,14 @@ class Player extends Dynamic {
         super(id, x, y, a);
         this.nick = nick;
 
+        this.hudRadius = 560;
+
+        //0-1 value for ammo and charge
+        this.charge = 0;
+        this.ammo   = 1;
+
         let self = this;
+        //Change light after health drop
         this.events.on('dHealth', function () {
             let light = self.obj.getObjectByName('light');
             light.intensity = self.health;
@@ -529,11 +543,39 @@ class Player extends Dynamic {
         this.events.on('hud', function (camera) {
             let pos2D = camera.positionToCamera(self.x, self.y, 0);
             let ctx = camera.hudMap;
-            ctx.fillStyle = "#ffffff";
+
+            //Nickname
+            ctx.fillStyle = '#ffffff';
             ctx.font = 'Normal Bold '+320/camera.z+'px Garamond';
             let x = pos2D.x;
-            let y = pos2D.y - (700/camera.z);
+            let y = pos2D.y - (800/camera.z);
             ctx.fillText(self.nick, x, y);
+
+            ctx.lineWidth   = 100/camera.z;
+
+            //Ammo
+            ctx.strokeStyle = '#5092fc';
+            ctx.beginPath();
+            let angle = (Math.PI*2)/3 - (self.ammo * Math.PI * 2/3);
+            let start = (Math.PI*3)/2 + angle/2;
+            let end   = Math.PI/6 - angle/2;
+            ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
+            ctx.stroke();
+
+            //Charge
+            ctx.strokeStyle = '#46ce37';
+            ctx.beginPath();
+            angle = (Math.PI*2)/3 - (self.charge * Math.PI * 2/3);
+            start = (Math.PI*5)/6 + angle/2;
+            end   = (Math.PI*3)/2 - angle/2;
+            ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
+            ctx.stroke();
+        });
+
+        //Update extra player stuff
+        this.events.on('update', function (scrape) {
+            self.ammo = scrape.ammo;
+            self.charge = scrape.charge;
         });
     }
 
