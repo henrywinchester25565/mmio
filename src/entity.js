@@ -385,6 +385,7 @@ class Barrel extends Physics {
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
 
         //BEHAVIOUR
+        this.maxHealth = 2;
         this.health = 2;
 
         let self = this;
@@ -405,6 +406,7 @@ class Barrel extends Physics {
         return {
             x: this.x,
             y: this.y,
+            health: this.health/this.maxHealth,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -624,6 +626,7 @@ class Wolf extends Enemy {
             x: this.x,
             y: this.y,
             a: this.a,
+            health: this.health/this.maxHealth,
             state: this.state,
             id: this.id,
             type: this.type,
@@ -647,6 +650,8 @@ class Player extends Physics {
 
     constructor (x, y, r, health, ammo, charge) {
         super(x, y);
+        this.nick = 'unnamed';
+
         //PHYSICS
         this.radius = r || 0.6;
 
@@ -681,6 +686,11 @@ class Player extends Physics {
         //Can collide with other players
         this.friendly = true;
 
+        //Damage cooldown - brief period of time before can be damaged again
+        //So monsters can't just stay touching players and doing damage
+        this.dmgInterval = 700; //700ms
+        this.lastDmg     = 700;
+
         //BOUNDS
         //Circle bounds
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
@@ -691,11 +701,20 @@ class Player extends Physics {
         let self = this;
         //Damaged
         this.onCollide(function (entity) {
-            if (!entity.friendly && entity.damage) {
+            if (!entity.friendly && entity.damage && self.lastDmg >= self.dmgInterval) {
                 self.health = self.health - entity.damage;
+                self.lastDmg = 0;
                 if (self.health <= 0) {
                     self.kill();
                 }
+            }
+
+        });
+
+        //Change last damage
+        this.onUpdate(function (dt) {
+            if (self.lastDmg < self.dmgInterval) {
+                self.lastDmg = self.lastDmg + dt;
             }
         });
     }
@@ -733,6 +752,7 @@ class Player extends Physics {
             y: this.y,
             a: this.a,
             id: this.id,
+            nick: this.nick,
             health: this.health/this.maxHealth,
             charge: this.charge/this.maxCharge,
             ammo: this.ammo,
