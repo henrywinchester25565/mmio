@@ -557,24 +557,27 @@ class Enemy extends Physics {
                 }
 
                 //Add force in direction of nearest player
-                let dir = $VECTOR.add({x: nearest.x, y: nearest.y}, $VECTOR.pro(-1, {x: self.x, y: self.y}));
-                dir = $VECTOR.nrm(dir); //Normalise
+                if (nearest) {
+                    let dir = $VECTOR.add({x: nearest.x, y: nearest.y}, $VECTOR.pro(-1, {x: self.x, y: self.y}));
+                    dir = $VECTOR.nrm(dir); //Normalise
 
-                //Flee if nearest is below flee radius
-                if (min <= self.flee) {
-                    self.state = $AI_STATES.flee;
-                    dir = $VECTOR.pro(-1, dir); //Move away from nearest player
+                    //Flee if nearest is below flee radius
+                    if (min <= self.flee) {
+                        self.state = $AI_STATES.flee;
+                        dir = $VECTOR.pro(-1, dir); //Move away from nearest player
+                    }
+                    else {
+                        self.state = $AI_STATES.follow;
+                    }
+
+                    let force = $VECTOR.pro(dir, self.force);
+                    self.forces.push(force);
+
+                    //Look at target
+                    dir.x = dir.x * -1; //Not sure why I have to do this
+                    self.a = $VECTOR.ang(dir);
                 }
-                else {
-                    self.state = $AI_STATES.follow;
-                }
 
-                let force = $VECTOR.pro(dir, self.force);
-                self.forces.push(force);
-
-                //Look at target
-                dir.x = dir.x * -1; //Not sure why I have to do this
-                self.a = $VECTOR.ang(dir);
             }
             else {
                 self.state = $AI_STATES.still;
@@ -669,8 +672,8 @@ class Player extends Physics {
         this.ammo         = ammo || 3;
         this.cooldownTime = 1000;  //Reload time for 1 ammo, ms
         this.cooldown     = 1000; //Time reloading, ms
-        this.fireRate     = 200;
-        this.lastRound    = 200;
+        this.fireRate     = 600;
+        this.lastRound    = 600;
 
         //Active weapons
         this.weapons = []; //Game adds created weapons to world
