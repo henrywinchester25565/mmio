@@ -703,12 +703,11 @@ class Camera {
         this.update();
 
         //HEADS UP DISPLAY (HUD)
-        //Renders bitmap images onto canvas and renders over the top of 3D camera
-        //Adapted from https://www.evermade.fi/pure-three-js-hud/
-        this.hudCanvas = document.createElement('canvas');
+        //Renders bitmap images onto html canvas
+        this.hudCanvas                = document.createElement('canvas');
         this.hudCanvas.style.position = 'relative';
         this.hudCanvas.style.top      = (this.height * -1) + 'px';
-        this.hudCanvas.style.zIndex  = '1000';
+        this.hudCanvas.style.zIndex   = '1000';
 
         this.hudCanvas.width  = this.width;
         this.hudCanvas.height = this.height;
@@ -974,6 +973,49 @@ let world;
 let player;
 let plyId;
 
+//GET AND SEND USERNAME
+function username () {
+
+    //Create text input
+    let input = document.createElement('input');
+    input.setAttribute('type', 'text');
+    let inputText = document.createTextNode('username');
+    input.appendChild(inputText);
+
+    //Create submit button
+    let submit = document.createElement('button');
+    let submitText = document.createTextNode('submit');
+    submit.appendChild(submitText);
+
+    //Create hint text
+    let hint = document.createElement('p');
+    let hintText = document.createTextNode('enter the username above');
+    hint.appendChild(hintText);
+
+    //Add elements to HTML
+    let render = document.getElementById('render');
+    render.appendChild(input);
+    render.appendChild(submit);
+    render.appendChild(hint);
+
+    //Send username on submit
+    submit.onclick = function () {
+        console.log(input.value);
+        socket.emit('username', input.value);
+    };
+
+    socket.on('username_bad', function () {
+        hint.innerHTML = 'invalid username';
+    });
+
+    socket.on('username_ok', function () {
+        render.removeChild(input);
+        render.removeChild(submit);
+        render.removeChild(hint);
+    });
+
+}
+
 //INPUT
 let keys = [];
 let btns = [];
@@ -1030,10 +1072,9 @@ function init () {
     
     */
 
-    socket.on('username', function () {
-        socket.emit('username', Math.floor(30*Math.random()));
-    });
-    
+    //GET USERNAME
+    socket.on('username', username);
+
     //INITIALISE WORLD
     socket.on('world_init', worldInit);
 
@@ -1075,7 +1116,9 @@ function init () {
         for (let i = 0; i < btns.length; i++) {
             inputs.push({type: 'btn', value: btns[i]});
         }
-        inputs.push({type: 'mouse', value: {x: world.mouse.x, y: world.mouse.y}});
+        if (world) {
+            inputs.push({type: 'mouse', value: {x: world.mouse.x, y: world.mouse.y}});
+        }
         socket.emit('input', inputs);
         btns = [];
     }, 33);
@@ -1118,4 +1161,3 @@ assetQueue.push({
 });
 
 loadAssets();
-//init();
