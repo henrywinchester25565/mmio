@@ -535,8 +535,8 @@ class Player extends Dynamic {
         //Change light after health drop
         this.events.on('dHealth', function () {
             let light = self.obj.getObjectByName('light');
-            light.intensity = self.health;
-            light.distance = 30 * self.health;
+            light.intensity = 0.2 + 0.8 * self.health;
+            light.distance = 5 + 25 * self.health;
         });
 
         //Nickname
@@ -581,6 +581,8 @@ class Player extends Dynamic {
 
     //Temp
     init () {
+        console.log('PLAYER');
+
         let group = new THREE.Group();
 
         let color = colors[Math.floor(Math.random()*(colors.length - 1))];
@@ -698,6 +700,10 @@ class Camera {
 
         this.renderer.setSize(this.width, this.height);
         this.html = this.renderer.domElement;
+        this.html.style.position = 'relative';
+        this.html.style.top      = '0';
+        this.html.style.left     = '0';
+        this.html.style.zIndex   = '1';
 
         this.camera = new THREE.PerspectiveCamera(fov, this.width/this.height, 0.1, 1000);
         this.update();
@@ -705,9 +711,10 @@ class Camera {
         //HEADS UP DISPLAY (HUD)
         //Renders bitmap images onto html canvas
         this.hudCanvas                = document.createElement('canvas');
-        this.hudCanvas.style.position = 'relative';
-        this.hudCanvas.style.top      = (this.height * -1) + 'px';
-        this.hudCanvas.style.zIndex   = '1000';
+        this.hudCanvas.style.position = 'absolute';
+        this.hudCanvas.style.top      = '0';
+        this.hudCanvas.style.left     = '0';
+        this.hudCanvas.style.zIndex   = '10';
 
         this.hudCanvas.width  = this.width;
         this.hudCanvas.height = this.height;
@@ -975,45 +982,98 @@ let plyId;
 
 //GET AND SEND USERNAME
 function username () {
+    console.log('> IN HOME');
+    //Remove any html in render
+    let render = document.getElementById('render');
+    while (render.firstChild) {
+        render.removeChild(render.firstChild);
+    }
 
-    //Create text input
+    let container = document.createElement('div');
+    container.className = "container container-hero color-black";
+
+    //TITLE
+    let title = document.createElement('h1');
+    title.className = "title text-center text-white";
+    let titleText = document.createTextNode('m m . i o');
+    title.appendChild(titleText);
+    container.appendChild(title);
+
+    let spacingOne = document.createElement('div');
+    spacingOne.style.padding = '2vh';
+    container.append(spacingOne);
+
+    //'ENTER NICKNAME' TEXT
+    let enter = document.createElement('h3');
+    enter.className = "text-center text-gray";
+    let enterText = document.createTextNode('ENTER NICKNAME');
+    enter.appendChild(enterText);
+    container.appendChild(enter);
+    
+    //NICKNAME INPUT
     let input = document.createElement('input');
     input.setAttribute('type', 'text');
-    let inputText = document.createTextNode('username');
-    input.appendChild(inputText);
+    input.className = "color-black text-center text-white";
+    let inputText = document.createTextNode('nickname');
+    input.append(inputText);
+    container.append(input);
 
-    //Create submit button
-    let submit = document.createElement('button');
-    let submitText = document.createTextNode('submit');
-    submit.appendChild(submitText);
-
-    //Create hint text
-    let hint = document.createElement('p');
-    let hintText = document.createTextNode('enter the username above');
-    hint.appendChild(hintText);
-
-    //Add elements to HTML
-    let render = document.getElementById('render');
-    render.appendChild(input);
-    render.appendChild(submit);
-    render.appendChild(hint);
-
-    //Send username on submit
-    submit.onclick = function () {
-        console.log(input.value);
-        socket.emit('username', input.value);
+    input.onkeypress = function (event) {
+        if (event.code === 'Enter') {
+            socket.emit('username', input.value);
+        }
     };
 
+    //HINT
+    let hint = document.createElement('h3');
+    hint.className = "text-center text-gray";
+    let hintText = document.createTextNode('PRESS ENTER TO SUBMIT');
+    hint.appendChild(hintText);
+    container.appendChild(hint);
+
+    //Add to html
+    render.appendChild(container);
+
     socket.on('username_bad', function () {
-        hint.innerHTML = 'invalid username';
+        hint.innerHTML = 'INVALID USERNAME';
     });
 
-    socket.on('username_ok', function () {
-        render.removeChild(input);
-        render.removeChild(submit);
-        render.removeChild(hint);
-    });
+}
 
+//LOBBY SCREEN
+let lobbyContainer;
+function lobby () {
+    console.log('> IN LOBBY');
+    //Remove any html in render
+    let render = document.getElementById('render');
+    while (render.firstChild) {
+        render.removeChild(render.firstChild);
+    }
+
+    if (lobbyContainer === undefined) {
+        //Create lobby elements
+        let container = document.createElement('div');
+        container.className = "container container-hero color-black";
+
+        let spacing = document.createElement('div');
+        spacing.style.padding = '18vh';
+        container.append(spacing);
+
+        let loading = document.createElement('h1');
+        loading.className = "text-white text-center";
+        let loadingText = document.createTextNode('l o a d i n g');
+        loading.appendChild(loadingText);
+        container.appendChild(loading);
+
+        let progress = document.createElement('h3');
+        progress.className = "text-gray text-center";
+        let progressText = document.createTextNode('WAITING FOR PLAYERS');
+        progress.appendChild(progressText);
+        container.appendChild(progress);
+
+        lobbyContainer = container;
+    }
+    render.appendChild(lobbyContainer);
 }
 
 //INPUT
@@ -1040,15 +1100,32 @@ function setPlayer (ply) {
 function worldInit (scrape) {
     'use strict'; //Strict mode
 
+    //Remove any html in render
+    let render = document.getElementById('render');
+    while (render.firstChild) {
+        render.removeChild(render.firstChild);
+    }
+
+    //Start world
     console.log('World initialising...');
     
     world = World.fromScrape(scrape);
     player = world.children[plyId];
     world.target = player;
-    document.getElementById('render').appendChild(world.camera.html);
-    document.getElementById('render').appendChild(world.camera.hudCanvas);
+    render.appendChild(world.camera.html);
+    render.appendChild(world.camera.hudCanvas);
 
     socket.on('update', update);
+
+    //If player exits, stop world and remove html
+    socket.on('exit', function () {
+        //Stop updates
+        socket.removeListener('update', update);
+
+        //Remove world
+        world.stop(); //Will be picked up by garbage collector
+        world = undefined;
+    });
 }
 
 //INITIALISATION
@@ -1074,6 +1151,9 @@ function init () {
 
     //GET USERNAME
     socket.on('username', username);
+
+    //LOBBY SCREEN
+    socket.on('lobby', lobby);
 
     //INITIALISE WORLD
     socket.on('world_init', worldInit);
