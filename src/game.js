@@ -12,6 +12,7 @@ const $WORLD  = require('./world.js');
 const $VECTOR = require('./general.js').vector;
 const $GEN    = require('./worldgen.js');
 const $BOUNDS = require('./bounds.js');
+const $UUID   = require('uuid/v4');
 
 //PARAMETERS
 const $DEFAULT_PARAMS = {
@@ -20,23 +21,43 @@ const $DEFAULT_PARAMS = {
     world_height: 72
 };
 
+//GAME STATES
+const $GAME_STATE = {
+    lobby: 0,
+    playing: 1,
+    finished: 2
+};
+
 //GAME
 class Game {
 
     constructor (args) {
         this.setParameters(args); //this.args <= the games parameters
+
+        this.id = $UUID();
+        console.log(this.id, ': NEW LOBBY');
+
+        //PLAYERS
         this.players = [];
 
+        //WORLD
         let worldGen = new $GEN(this.args.world_width, this.args.world_height);
-        this.world = worldGen.generate();
+        this.world   = worldGen.generate();
         this.enemies = worldGen.enemies;
-        this.spawn = worldGen.graph.nodes[0].pos;
+        this.spawn   = worldGen.spawn;
+        this.exit    = worldGen.exit;
 
+        //FUNCTIONALITY
         this.changed = []; //Entities changed since last update
-        
+
         let self = this;
-        //AI behaviour
+        //AI behaviour & gateways
         this.world.onUpdate(function () {
+            //If all enemies are dead, open the exit
+            if (self.enemies.length <= 0) {
+                self.exit.open = true;
+            }
+
             //Get bounds lists
             let plyBounds = [];
             let enemyBounds = [];
@@ -63,6 +84,13 @@ class Game {
                 }
             }
 
+            if (self.exit.open) {
+                //Add the exit to enemies
+                //The exit test code works pretty much the same as the enemy AI, so self saves some time having to
+                //Do collision testing again with all the players
+                enemyBounds.push({ent: self.exit, players: [], bounds: self.exit.bounds});
+            }
+
             //Collide player and enemy bounds with enemies as the specific
             let collisions = $BOUNDS.getCollisions(plyBounds, enemyBounds);
             for (let i = 0; i < collisions.length; i++) {
@@ -73,6 +101,31 @@ class Game {
             //Trigger action event on enemies
             for (let i = 0; i < enemyBounds.length; i++) {
                 enemyBounds[i].ent.action(enemyBounds[i].players); //Pass collided players as parameter
+            }
+
+            //Check how many players are alive
+            let alive = 0;
+            for (let i = 0; i < self.players.length; i++) {
+                //Alive and in game
+                if (self.players[i].game === self) {
+                    alive++;
+                }
+                else {
+                    //Cleanup dead players
+                    setTimeout(function () {
+                        if (self.state === $GAME_STATE.running) {
+                            let index = self.players.indexOf(self.players[i]); //In case index changes in 3s
+                            if (index >= 0) {
+                                self.players.splice(index, 1);
+                            }
+                        }
+                    }, 3000);
+                }
+            }
+
+            //If all dead, stop game
+            if (alive <= 0) {
+                self.stop();
             }
         });
 
@@ -87,7 +140,11 @@ class Game {
             }
         });
 
-        this.running = false;
+        //GAME STATE
+        this.state = $GAME_STATE.lobby;
+
+        //Looks better on console
+        console.log('');
     }
 
     //Used to update specific parameters
@@ -109,16 +166,47 @@ class Game {
         let index = this.players.indexOf(ply); //If already in game
         if (this.players.length <= this.args.max_players && index === -1) {
             this.players.push(ply);
+
+            ply.game = this;
+
+            ply.generateEntity();
+
             ply.entity.x = this.spawn.x;
             ply.entity.y = this.spawn.y;
+            //TODO apply random force
             this.world.addChild(ply.entity);
+        }
+
+        //If max players, start game
+        if (this.players.length >= this.args.max_players) {
+            this.start();
+        }
+        //If first player to join, start max waiting period
+        else if (this.players.length === 1) {
+            let self = this;
+            //Wait ten seconds for players to join
+            setTimeout(function () {
+
+                //If still in lobby after ten seconds
+                if (self.state === $GAME_STATE.lobby) {
+                    //Start the game
+                    self.start();
+                }
+
+            }, 10000);
+        }
+
+        //If game is in lobby, send lobby screen
+        if (this.state === $GAME_STATE.lobby) {
+            ply.socket.emit('lobby');
         }
     }
 
     //Try not to add players after the start of the game
     addPlayer (ply) {
         this.queuePlayer(ply);
-        if (this.running && this.players.length <= this.args.max_players) {
+        //If added after started
+        if (this.state === $GAME_STATE.running && this.players.length <= this.args.max_players) {
             let scrapedWorld = this.world.scrapeAll();
             ply.socket.emit('world_init', scrapedWorld);
         }
@@ -130,12 +218,17 @@ class Game {
         if (index > -1) {
             this.players.splice(index, 1);
         }
+
+        //If no players, end game
+        if (this.players.length <= 0) {
+            this.stop();
+        }
     }
 
     //STARTS THE GAME
     start () {
-        console.log('> Starting Game');
-        this.running = true;
+        console.log(this.id, '> Starting Game');
+        this.state = $GAME_STATE.running;
         this.world.start();
 
         //SEND WORLD TO PLAYERS
@@ -148,7 +241,7 @@ class Game {
         let self = this;
         //Send updates every 50ms
         let updateClients = function () {
-            if (self.running) {
+            if (self.state === $GAME_STATE.running) {
                 let changed = [];
                 for (let i = 0; i < self.changed.length; i++) {
                     let ent = self.changed[i];
@@ -165,7 +258,7 @@ class Game {
         setTimeout(updateClients, 50);
         //update players every 15ms
         let updatePlayer = function () {
-            if (self.running) {
+            if (self.state === $GAME_STATE.running) {
                 let plys = self.players;
                 for (let i = 0; i < plys.length; i++) {
                     let ply = plys[i];
@@ -231,8 +324,8 @@ class Game {
 
     //STOPS (PAUSES) THE GAME
     stop () {
-        console.log('> Stopping Game');
-        this.running = false;
+        console.log(this.id, '> Stopping Game');
+        this.state = $GAME_STATE.finished;
         this.world.stop();
     }
 
