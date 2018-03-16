@@ -5,8 +5,8 @@
 console.log("Loaded: entity.js");
 
 //REQUIREMENTS
-const $VECTOR = require('./general').vector;
-const $BOUNDS = require('./bounds');
+const $VECTOR = require('./general.js').vector;
+const $BOUNDS = require('./bounds.js');
 const $EVENTS = require('./events.js');
 const $UUID   = require('uuid/v4');
 
@@ -115,6 +115,7 @@ class Wall extends Entity {
         this.w = w;
         this.h = h;
 
+        //Used in physics as infinite mass
         this.collides = true;
 
         this.type = 'wall';
@@ -258,7 +259,6 @@ class Physics extends Entity {
                 //If dynamic collision
                 else {
 
-                    //TODO THIS IS BROKEN
                     //Find impulse of other on self
                     let vel = collision.velocity;
                     let mass = collision.mass;
@@ -762,6 +762,15 @@ class Player extends Physics {
         this.events.emit('attack_special', target);
     }
 
+    //When gateway makes exit
+    onExit (func) {
+        this.events.on('exit', func);
+    }
+
+    exit () {
+        this.events.emit('exit');
+    }
+
     //xp
     gainXP (xp) {
         this.xp = this.xp + xp;
@@ -781,7 +790,7 @@ class Player extends Physics {
             ammo: this.ammo/this.maxAmmo,
             type: this.type,
             alive: this.alive
-        }
+        };
     }
 
 }
@@ -838,6 +847,109 @@ class Mage extends Player {
 }
 
 /*
+   _____          __  __ ______ _____  _           __     __
+  / ____|   /\   |  \/  |  ____|  __ \| |        /\\ \   / /
+ | |  __   /  \  | \  / | |__  | |__) | |       /  \\ \_/ /
+ | | |_ | / /\ \ | |\/| |  __| |  ___/| |      / /\ \\   /
+ | |__| |/ ____ \| |  | | |____| |    | |____ / ____ \| |
+  \_____/_/    \_\_|  |_|______|_|    |______/_/    \_\_|
+ */
+
+//GATEWAY
+//Marks player spawns and exits
+class Gateway extends Entity {
+
+    constructor (x, y, end) {
+        super(x, y);
+
+        //DIMENSIONS
+        //3x3 units squared
+        this.w = 3;
+        this.h = 3;
+
+        //BOUNDS
+        this.bounds = new $BOUNDS.bounds.box(x, y, this.w, this.h);
+
+        //FUNCTIONALITY
+        this.open = false;
+        this.end  = end || false;
+
+        if (this.end) {
+            let self = this;
+            this.onAction(function (players) {
+                //Make players exit world
+                if (self.open) {
+                    for (let i = 0; i < players.length; i++) {
+                        players[i].exit();
+                        players[i].kill();
+                    }
+                }
+            });
+        }
+
+        this.type = 'barrel';
+    }
+
+    onAction (func) {
+        this.events.on('action', func);
+    }
+
+    action (players) {
+        this.events.emit('action', players);
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            type: this.type,
+            id: this.id,
+            alive: this.alive
+        };
+    }
+
+}
+
+//CHEST
+//Pretty much a wall with an inventory
+class Chest extends Entity {
+
+    //Dir is a vector
+    constructor (x, y, dir) {
+        super (x, y);
+
+        //Based on direction facing, give angle and create bounds
+        this.a = $VECTOR.ang(dir);
+
+        //DIMENSIONS
+        this.w = dir.x === 0 ? 1 : 0.5;
+        this.h = dir.y === 0 ? 1 : 0.5;
+
+        //FUNCTIONALITY
+        this.inventory = [];
+
+        //BOUNDS
+        this.bounds = new $BOUNDS.bounds.box(x, y, this.w, this.h);
+
+        this.type = 'chest';
+    }
+
+    generateInventory () {
+        //TODO
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            type: this.type,
+            id: this.id,
+            alive: this.alive
+        };
+    }
+}
+
+/*
   ________   _______   ____  _____ _______ _____
  |  ____\ \ / /  __ \ / __ \|  __ \__   __/ ____|
  | |__   \ V /| |__) | |  | | |__) | | | | (___
@@ -854,6 +966,10 @@ const $ENTITIES = {
     light: Light,
     phys: Physics,
     barrel: Barrel,
+
+    //GAMEPLAY
+    gateway: Gateway,
+    chest: Chest,
 
     //PLAYERS
     players: {
