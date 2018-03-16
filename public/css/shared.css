@@ -1,0 +1,149 @@
+/* Fonts */
+@import url('https://fonts.googleapis.com/css?family=Comfortaa');
+
+/* Structural */
+html {
+	margin: 0;
+	overflow: hidden;
+	overflow-y: hidden;
+}
+
+.container {
+	display: block;
+	width: 100%;
+	padding: 12px;
+	margin: auto;
+}
+
+.container-hero {
+	width: 100vw;
+	height: 100vh;
+}
+
+.container-narrow {
+	max-width: 1024px;
+}
+
+/* Color */
+.color-blue {
+	background-color: #3C98EB;
+}
+
+.color-yellow {
+	background-color: #E3D222;
+}
+
+.color-pink {
+	background-color: #FF2B52;
+}
+
+.color-blue2 {
+	background-color: #3B5CED;
+}
+
+.color-green {
+	background-color: #037626;
+}
+
+.color-black {
+	background-color: #000000;
+}
+
+/* Text */
+.text-white {
+	color: white;
+}
+
+.text-blue {
+	color: #3C98EB;
+}
+
+.text-pink {
+	color: #FF2B52;
+}
+
+.text-green {
+	color: #037626;
+}
+
+.text-gray {
+	color: #666666;
+}
+
+.text-center {
+	text-align: center;
+}
+
+h1 {
+	font-family: 'Comfortaa', cursive;
+	font-size: 24px;
+}
+
+h1.title {
+	font-size: 32px;
+}
+
+h2 {
+	font-family: 'Comfortaa', cursive;
+	font-size: 16px;
+}
+
+/* Functionality */
+*:focus {
+	outline: none;
+}
+
+input {
+	margin: auto;
+	border: none;
+	display: block;
+	padding: 12px;
+	font-family: 'Comfortaa', cursive;
+	font-size: 18px;
+}
+
+input[type="text"] {
+	font-size: 32px;
+	width: 9em;
+	border-bottom: solid #ffffff 2px;
+}
+
+input[type="button"] {
+	color: white;
+	background-color: #3C98EB;
+	border-radius: 4px;
+}
+
+input[type="button"]:hover {
+	box-shadow: 0px 0px 5px 2px rgba(0,0,0,0.2);
+}
+
+/* Media */
+/* Tablet */
+@media (min-width: 768px) {
+	h1 {
+		font-size: 48px;
+	}
+	h1.title {
+		font-size: 64px;
+	}
+	h2 {
+		font-size: 32px;
+	}
+
+	input[type="text"] {
+		font-size: 64px;
+	}
+}
+/* Desktop */
+@media (min-width: 1024px) {
+	h1 {
+		font-size: 82px;
+	}
+	h1.title {
+		font-size: 128px;
+	}
+	h2 {
+		font-size: 64px;
+	}
+}
