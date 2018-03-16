@@ -245,7 +245,8 @@ const $PAINT = {
     void: '.',
     path: ' ',
     wall: '##',
-    barrel: 'O ',
+    gate: 'G',
+    barrel: 'O',
     wolf: 'W'
 };
 
@@ -668,13 +669,6 @@ class WorldGen {
             this.canvas.line(c, a, $PAINT.wall, 0, $PAINT.path);
         }
 
-        //TODO Patch and Pull walls
-        //Patch gaps between walls and walls/paths  for sizes smaller than 4 spaces
-        //Walls causing corridors get pushed
-        //Fill in empty space where there is no path
-
-        //this.canvas.print();
-
         //Get directions to operate in
         let directions = [];
         for (let d in $DIR) {
@@ -719,8 +713,6 @@ class WorldGen {
             }
         }
 
-        //this.canvas.print();
-
         //PATCH
         for (let i = 0; i < directions.length; i++) {
             dir = directions[i];
@@ -762,8 +754,6 @@ class WorldGen {
                 pos = $VECTOR.add(pos, sideDir);
             }
         }
-
-        //this.canvas.print();
 
         //FILL
         //Fill empty space with wall in all four cardinal directions
@@ -902,6 +892,24 @@ class WorldGen {
             attempts --;
         }
 
+        //SPAWN AND EXIT
+        //Spawn
+        pos       = this.graph.nodes[0].pos;
+        let spawn = new $ENTITY.gateway(pos.x, pos.y, false);
+        this.canvas.paint(pos, $PAINT.gate, 1);
+        world.queueChild(spawn);
+        this.spawn = spawn;
+
+        //Exit
+        pos       = this.graph.nodes[this.graph.nodes.length-1].pos;
+        let exit  = new $ENTITY.gateway(pos.x, pos.y, true);
+        this.canvas.paint(pos, $PAINT.gate, 1);
+        world.queueChild(exit);
+        this.exit = exit;
+
+
+
+        //ENTITIES
         //Add barrels
         let barrels = Math.random() * this.graph.edges.length;
         for (let i = 0; i < barrels; i++) {
@@ -927,7 +935,7 @@ class WorldGen {
         }
 
         //Add enemies
-        let enemies = Math.random() * this.graph.edges.length * 1.5;
+        let enemies =  4 + Math.random() * this.graph.edges.length * 0.25;
         for (let i = 0; i < enemies; i++) {
             pos = {x: 0, y: 0};
             let walls = false;
@@ -952,7 +960,6 @@ class WorldGen {
             world.queueChild(wolf);
         }
 
-        this.canvas.print();
         return world;
     }
 
