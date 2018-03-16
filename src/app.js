@@ -45,9 +45,15 @@ $APP.get('/', function(req, res){
     res.sendFile($ROOT + 'public/html/index.html');
 });
 
-////////////////////////////////////////////////////
+/*
+   _____          __  __ ______
+  / ____|   /\   |  \/  |  ____|
+ | |  __   /  \  | \  / | |__
+ | | |_ | / /\ \ | |\/| |  __|
+ | |__| |/ ____ \| |  | | |____
+  \_____/_/    \_\_|  |_|______|
+ */
 
-//GAME
 //REQUIREMENTS
 
 const $GAME = require('./game.js');
@@ -55,17 +61,34 @@ const $PLAYER = require('./player.js');
 
 console.log('');//Break in console
 
-//Table of games
-//Game id, game object relationship
-const $GAMES = {};
-//TODO ^
-let game;
-
 //Table of all players
 //Socket id, player object relationship
 const $PLAYERS = {};
+
+//Game to add players to
+let game = new $GAME();
+
 //List of all taken username's
 const $USERNAMES = [];
+
+/*
+  __  __       _______ _____ _    _ __  __          _  _______ _   _  _____
+ |  \/  |   /\|__   __/ ____| |  | |  \/  |   /\   | |/ /_   _| \ | |/ ____|
+ | \  / |  /  \  | | | |    | |__| | \  / |  /  \  | ' /  | | |  \| | |  __
+ | |\/| | / /\ \ | | | |    |  __  | |\/| | / /\ \ |  <   | | | . ` | | |_ |
+ | |  | |/ ____ \| | | |____| |  | | |  | |/ ____ \| . \ _| |_| |\  | |__| |
+ |_|  |_/_/    \_\_|  \_____|_|  |_|_|  |_/_/    \_\_|\_\_____|_| \_|\_____|
+ */
+
+//Handle those waiting in lobby
+const $ADD_TO_LOBBY = function (ply) {
+    //IF NO LOBBY
+    if (game.state !== 0) {
+        game = new $GAME();
+    }
+    game.queuePlayer(ply);
+};
+
 //Functions to handle (dis)connect
 const $PLY_CONNECT = function (socket) {
     console.log('Connection: ' + socket.id);
@@ -76,27 +99,18 @@ const $PLY_CONNECT = function (socket) {
             //Stop listening for username's after good one
             socket.removeListener('username', handleUsername);
 
-            //New game when players first join
-            if ($USERNAMES.length === 0) {
-                if (game !== undefined) {
-                    game.stop();
-                }
-                game = new $GAME();
-                game.start();
-            }
-
-            console.log(username);
-
-            //Add username to array of username's
             $USERNAMES.push(username);
             socket.emit('username_ok'); //Username is good
             //Create player
             let ply = new $PLAYER(socket, username);
             $PLAYERS[ply.id] = ply;
-            socket.emit('ready');
 
-            //Add to game
-            game.addPlayer(ply);
+            //Add player to lobby when made to exit from game
+            ply.onExit(function () {
+                $ADD_TO_LOBBY(ply);
+            });
+
+            $ADD_TO_LOBBY(ply);
         }
         else {
             socket.emit('username_bad'); //Username not good
@@ -111,7 +125,9 @@ const $PLY_DISCONNECT = function (socket) {
     if ($PLAYERS[socket.id] !== undefined) {
         let ply = $PLAYERS[socket.id];
         //Remove player from game
-        game.killPlayer(ply);
+        if (ply.game) {
+            ply.game.killPlayer(ply);
+        }
 
         //Clear username for others to use
         let index = $USERNAMES.indexOf(ply.nick);
