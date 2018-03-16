@@ -6,18 +6,23 @@ console.log("Loaded: player.js");
 
 //REQUIREMENTS
 const $ENTITY = require('./entity.js');
+const $EVENTS = require('./events.js');
 
 //PLAYER CLASS FOR PLAYER HANDLING
 class Player {
     constructor (socket, username, plyClass) {
-        this.type   = 'player';
+        this.type = 'player';
         this.socket = socket;
-        this.id     = socket.id;
-        this.nick   = username;
+        this.id = socket.id;
+        this.nick = username;
+
+        this.game = undefined; //Set when starting a new game
+
+        this.events = new $EVENTS.handler();
 
         //INPUT
-        this.keys  = [];
-        this.btns  = [];
+        this.keys = [];
+        this.btns = [];
         this.mouse = {x: 0, y: 0};
 
         let self = this;
@@ -54,15 +59,34 @@ class Player {
 
         //PLAYER DATA
         this.inventory = [];
-        this.plyClass  = plyClass || 'mage';
-        this.stats     = {};
-        this.xp        = 0;
+        this.plyClass = plyClass || 'mage';
+        this.stats = {};
+        this.xp = 0;
 
-        //Player entity
-        this.entity      = new $ENTITY.players[this.plyClass](2,2);
+        this.entity = undefined; //Created at start of game
+    }
+
+    generateEntity () {
+        this.entity = new $ENTITY.players[this.plyClass](2,2);
         this.entity.nick = this.nick;
 
+        //When entity exits game
+        let self = this;
+        this.entity.onExit(function () {
+            self.exit();
+        });
+
+        //Send player entity to game
         this.socket.emit('ply', this.entity.scrape());
+    }
+
+    onExit (func) {
+        this.events.on('exit', func);
+    }
+
+    exit () {
+        this.events.emit('exit');
+        this.socket.emit('exit');
     }
 
 }
