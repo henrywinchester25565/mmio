@@ -20,6 +20,8 @@ class Player {
 
         this.events = new $EVENTS.handler();
 
+        this.level = 1;
+
         //INPUT
         this.keys = [];
         this.btns = [];
@@ -87,6 +89,7 @@ class Player {
     exit () {
         this.events.emit('exit');
         this.socket.emit('exit');
+        this.level++;
     }
 
 }
