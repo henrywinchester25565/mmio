@@ -64,6 +64,7 @@ console.log('');//Break in console
 //Table of all players
 //Socket id, player object relationship
 const $PLAYERS = {};
+const $RANKING = {};
 
 //Game to add players to
 let game = new $GAME();
@@ -82,38 +83,112 @@ const $USERNAMES = [];
 
 //Handle those waiting in lobby
 const $ADD_TO_LOBBY = function (ply) {
+    //PLAYER RANK
+    //Remove from old rank
+    let oldRank = ply.level - 1;
+    if (oldRank > 0) {
+        //Delete from old rank
+        let index = $RANKING[oldRank].indexOf(ply);
+        if (index > -1) {
+            $RANKING[oldRank].splice(index, 1); //Remove
+
+            //If ranking now empty, delete it
+            if ($RANKING[oldRank].length <= 0) {
+                delete $RANKING[oldRank];
+            }
+
+        }
+    }
+
+    //Add to new rank
+    if ($RANKING[ply.level] === undefined) { //Doesn't exist yet
+        $RANKING[ply.level] = [];
+    }
+    if ($RANKING[ply.level].indexOf(ply) < 0) { //Player not in yet
+        $RANKING[ply.level].push(ply);
+    }
+
+    //GET TOP PLAYERS
+    let topRank = 0;
+    for (let rank in $RANKING) {
+        if ($RANKING.hasOwnProperty(rank)) {
+            topRank = rank > topRank ? rank : topRank;
+        }
+    }
+
+    //Top players
+    let players = [];
+    while (topRank > 0 && players.length < 5) {
+        let rank = topRank;
+        if ($RANKING.hasOwnProperty(rank)) {
+            let i = 0;
+            let player = undefined;
+            //Go through players of that rank and add to list if not in already
+            while (player === undefined && i < $RANKING[rank].length) {
+                let next = $RANKING[rank][i];
+                if (players.indexOf(next) === -1) { //New player for top players list
+                    player = next;
+                }
+                i++
+            }
+            if (player !== undefined) {
+                players.push(player);
+            }
+            //Run out of players at this rank, go down
+            else {
+                topRank--;
+            }
+        }
+        //Go down rank until find a rank with players
+        else {
+            topRank--;
+        }
+    }
+
+    //Refine players list into a list of strings
+    let rankings = [];
+    for (let i = 0; i < players.length; i++) {
+        rankings.push(players[i].nick + ', lvl: ' + players[i].level);
+    }
+
     //IF NO LOBBY
     if (game.state !== 0) {
         game = new $GAME();
     }
-    game.queuePlayer(ply);
+    game.queuePlayer(ply, rankings);
 };
 
 //Functions to handle (dis)connect
 const $PLY_CONNECT = function (socket) {
     console.log('Connection: ' + socket.id);
 
-    socket.emit('username');
+    socket.emit('username', $USERNAMES.length);
     let handleUsername = function (username) {
-        if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
-            //Stop listening for username's after good one
-            socket.removeListener('username', handleUsername);
+        if (typeof username === 'string') {
+            username = username.substring(0, 14);
+            if ($PLAYERS[socket.id] === undefined && $USERNAMES.indexOf(username) === -1) {
+                //Stop listening for username's after good one
+                socket.removeListener('username', handleUsername);
 
-            $USERNAMES.push(username);
-            socket.emit('username_ok'); //Username is good
-            //Create player
-            let ply = new $PLAYER(socket, username);
-            $PLAYERS[ply.id] = ply;
+                $USERNAMES.push(username);
+                socket.emit('username_ok'); //Username is good
+                //Create player
+                let ply = new $PLAYER(socket, username);
+                $PLAYERS[ply.id] = ply;
 
-            //Add player to lobby when made to exit from game
-            ply.onExit(function () {
+                //Add player to lobby when made to exit from game
+                ply.onExit(function () {
+                    $ADD_TO_LOBBY(ply);
+                });
+
                 $ADD_TO_LOBBY(ply);
-            });
-
-            $ADD_TO_LOBBY(ply);
+            }
+            else {
+                socket.emit('username_bad'); //Username not good
+            }
         }
-        else {
-            socket.emit('username_bad'); //Username not good
+        else{
+            socket.emit('username_bad'); //Username not even a string
         }
     };
     socket.on('username', handleUsername);
