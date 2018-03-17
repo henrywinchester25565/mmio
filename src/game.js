@@ -162,7 +162,7 @@ class Game {
         }
     }
 
-    queuePlayer (ply) {
+    queuePlayer (ply, rankings) {
         let index = this.players.indexOf(ply); //If already in game
         if (this.players.length <= this.args.max_players && index === -1) {
             this.players.push(ply);
@@ -197,8 +197,9 @@ class Game {
         }
 
         //If game is in lobby, send lobby screen
+        rankings = rankings || []; //Send top rankings
         if (this.state === $GAME_STATE.lobby) {
-            ply.socket.emit('lobby');
+            ply.socket.emit('lobby', rankings);
         }
     }
 
