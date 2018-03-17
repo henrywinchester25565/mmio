@@ -95,13 +95,6 @@ class EventHandler {
 //MANAGER
 const manager = new THREE.LoadingManager();
 
-//On progress
-manager.onProgress = function (xhr) {
-    //xhr is an XMLHttpRequest instance containing details of loading progress
-    console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-    return xhr.loaded/xhr.total;
-};
-
 //On error
 manager.onError = function (err) {
     console.error('> Error: ', err);
@@ -328,6 +321,39 @@ class Wall extends Entity {
 }
 entities[Wall.type] = Wall;
 
+//SPAWNS AND EXITS
+class Gateway extends Entity {
+
+    static get type () {
+        return 'gateway';
+    }
+
+    constructor (id, x, y, end, open) {
+        super (id, x, y);
+        this.end = end;
+        this.open = open;
+    }
+
+    init () {
+        let obj = objects['gateway'].clone();
+        obj.rotation.x = Math.PI/2;
+        obj.position.set(this.x, this.y, 0);
+        obj.receiveShadow = true;
+
+        let mat = obj.getObjectByName('Gateway').material;
+        mat.emissive = new THREE.Color(0x00ff00);
+        mat.needsUpdate = true;
+
+        this.obj = obj;
+        return obj;
+    }
+
+    static fromScrape (scrape) {
+        return new Gateway(scrape.id, scrape.x, scrape.y, scrape.end, scrape.open);
+    }
+}
+entities[Gateway.type] = Gateway;
+
 //DYNAMIC ENTITY BASE CLASS
 class Dynamic extends Entity {
 
@@ -512,9 +538,38 @@ class Wolf extends Dynamic {
 }
 entities[Wolf.type] = Wolf;
 
+class Centurion extends Dynamic {
+    
+    static get type () {
+        return 'centurion';
+    }
+
+    constructor (id, x, y, a) {
+        super (id, x, y, a);
+    }
+
+    init () {
+        let centurion = objects['centurion'].clone();
+        centurion.rotation.x = Math.PI/2;
+        centurion.rotation.y = Math.PI;
+
+        let obj = new THREE.Group(); //So it rotates properly
+        obj.add(centurion);
+        obj.position.set(this.x, this.y, 0);
+        this.obj = obj;
+        return obj;
+    }
+
+    static fromScrape (scrape) {
+        return new Centurion(scrape.id, scrape.x, scrape.y, scrape.a);
+    }
+    
+}
+entities[Centurion.type] = Centurion;
+
 //PLAYER TOKEN CLASS
 //0xef56b4
-let colors = [0x5092fc, 0x46ce37, 0xffffff];
+let colors = [{r: 0x50, g: 0x92, b: 0xfc}, {r: 0x46, g: 0xce, b: 0x37}];
 class Player extends Dynamic {
 
     static get type () {
@@ -524,6 +579,9 @@ class Player extends Dynamic {
     constructor (id, x, y, a, nick) {
         super(id, x, y, a);
         this.nick = nick;
+
+        this.color = colors[Math.round(Math.random() * (colors.length-1))];
+        console.log(this.color);
 
         this.hudRadius = 560;
 
@@ -535,8 +593,16 @@ class Player extends Dynamic {
         //Change light after health drop
         this.events.on('dHealth', function () {
             let light = self.obj.getObjectByName('light');
-            light.intensity = 0.2 + 0.8 * self.health;
+            light.intensity = 0.5 + 0.5 * self.health;
             light.distance = 5 + 25 * self.health;
+
+            //Tween light color
+            //Color split into channels for tween
+            let r = self.color.r + Math.floor((0xff - self.color.r)*self.health);
+            let g = self.color.g + Math.floor((0xff - self.color.g)*self.health);
+            let b = self.color.b + Math.floor((0xff - self.color.b)*self.health);
+            console.log(r, g, b);
+            light.color = new THREE.Color(r/255, g/255, b/255);
         });
 
         //Nickname
@@ -585,7 +651,7 @@ class Player extends Dynamic {
 
         let group = new THREE.Group();
 
-        let color = colors[Math.floor(Math.random()*(colors.length - 1))];
+        let color = new THREE.Color(0xffffff);
 
         let light = new THREE.PointLight(color, 1, 30, 2);
         light.shadow.mapSize.width = 1024;
@@ -981,7 +1047,7 @@ let player;
 let plyId;
 
 //GET AND SEND USERNAME
-function username () {
+function username (online) {
     console.log('> IN HOME');
     //Remove any html in render
     let render = document.getElementById('render');
@@ -1020,7 +1086,8 @@ function username () {
 
     input.onkeypress = function (event) {
         if (event.code === 'Enter') {
-            socket.emit('username', input.value);
+            let value = input.value.substring(0, 14);
+            socket.emit('username', value);
         }
     };
 
@@ -1030,6 +1097,12 @@ function username () {
     let hintText = document.createTextNode('PRESS ENTER TO SUBMIT');
     hint.appendChild(hintText);
     container.appendChild(hint);
+
+    let onlinePlys = document.createElement('h3');
+    onlinePlys.className = "text-center text-gray";
+    let onlinePlysText = document.createTextNode(online + ' PLAYERS ARE ONLINE');
+    onlinePlys.appendChild(onlinePlysText);
+    container.appendChild(onlinePlys);
 
     //Add to html
     render.appendChild(container);
@@ -1042,7 +1115,9 @@ function username () {
 
 //LOBBY SCREEN
 let lobbyContainer;
-function lobby () {
+function lobby (playerRanks) {
+    playerRanks = playerRanks || []; //If not sent for any reason
+
     console.log('> IN LOBBY');
     //Remove any html in render
     let render = document.getElementById('render');
@@ -1071,9 +1146,21 @@ function lobby () {
         progress.appendChild(progressText);
         container.appendChild(progress);
 
+        let rank = document.createElement('h3');
+        rank.className = "text-gray text-center";
+        rank.id = 'rank';
+        container.appendChild(rank);
+
         lobbyContainer = container;
     }
     render.appendChild(lobbyContainer);
+    
+    //Add player ranks
+    let rankings = 'TOP PLAYERS';
+    for (let i = 0; i < playerRanks.length; i++) {
+        rankings = rankings + '<br>' + playerRanks[i];
+    }
+    document.getElementById('rank').innerHTML = rankings;
 }
 
 //INPUT
@@ -1226,6 +1313,11 @@ assetQueue.push({
 });
 assetQueue.push({
     type: 'obj',
+    location: 'models/gateway.json',
+    name: 'gateway'
+});
+assetQueue.push({
+    type: 'obj',
     location: 'models/mage.json',
     name: 'mage'
 });
@@ -1238,6 +1330,11 @@ assetQueue.push({
     type: 'obj',
     location: 'models/wolf.json',
     name: 'wolf'
+});
+assetQueue.push({
+    type: 'obj',
+    location: 'models/centurion.json',
+    name: 'centurion'
 });
 
 loadAssets();
