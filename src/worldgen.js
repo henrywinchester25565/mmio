@@ -247,7 +247,7 @@ const $PAINT = {
     wall: '##',
     gate: 'G',
     barrel: 'O',
-    wolf: 'W'
+    enemy: 'X'
 };
 
 //CARDINAL DIRECTIONS
@@ -895,7 +895,7 @@ class WorldGen {
         //SPAWN AND EXIT
         //Spawn
         pos       = this.graph.nodes[0].pos;
-        let spawn = new $ENTITY.gateway(pos.x, pos.y, false);
+        let spawn = new $ENTITY.gateway(pos.x+0.5, pos.y+0.5, false); //Not sure why correction is needed, but it works
         this.canvas.paint(pos, $PAINT.gate, 1);
         world.queueChild(spawn);
         this.spawn = spawn;
@@ -935,6 +935,7 @@ class WorldGen {
         }
 
         //Add enemies
+        let enemyTypes = ['wolf', 'centurion'];
         let enemies =  4 + Math.random() * this.graph.edges.length * 0.25;
         for (let i = 0; i < enemies; i++) {
             pos = {x: 0, y: 0};
@@ -954,10 +955,11 @@ class WorldGen {
                     }
                 }
             }
-            this.canvas.canvas[pos.x][pos.y] = $PAINT.wolf;
-            let wolf = new $ENTITY.enemies.wolf(pos.x, pos.y);
-            this.enemies.push(wolf);
-            world.queueChild(wolf);
+            let enemyType = enemyTypes[Math.round(Math.random() * (enemyTypes.length-1))];
+            this.canvas.canvas[pos.x][pos.y] = $PAINT.enemy;
+            let enemy = new $ENTITY.enemies[enemyType](pos.x, pos.y);
+            this.enemies.push(enemy);
+            world.queueChild(enemy);
         }
 
         return world;
