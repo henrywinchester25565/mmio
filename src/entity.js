@@ -577,7 +577,7 @@ class Enemy extends Physics {
                     dir = $VECTOR.nrm(dir); //Normalise
 
                     //Flee if nearest is below flee radius
-                    if (min <= self.flee) {
+                    if (min <= self.flee || self.health <= self.minHealth) {
                         self.state = $AI_STATES.flee;
                         dir = $VECTOR.pro(-1, dir); //Move away from nearest player
                     }
@@ -620,10 +620,9 @@ class Enemy extends Physics {
 class Wolf extends Enemy {
 
     constructor (x, y) {
-        super(x, y, 60, 1000);
+        super(x, y, 65, 1000, 3);
         //PHYSICS
         this.radius = 0.5;
-        this.mass   = 65;
 
         //Area for drag
         this.area = this.radius * this.radius;
@@ -632,6 +631,41 @@ class Wolf extends Enemy {
         this.bounds = new $BOUNDS.bounds.circle(x, y, this.radius);
 
         this.type = 'wolf';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            a: this.a,
+            health: this.health/this.maxHealth,
+            state: this.state,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+//CENTURION
+//Large, powerful and more complex enemy
+class Centurion extends Wolf {
+
+    constructor (x, y) {
+        super(x, y, 100, 1000, 4);
+        this.minHealth = 1;
+
+        //PHYSICS
+        this.radius = 0.9;
+
+        //Area for drag
+        this.area = this.radius * this.radius;
+
+        //BOUNDS
+        this.bounds = new $BOUNDS.bounds.circle(x, y, this.radius);
+
+        this.type = 'centurion';
     }
 
     scrape () {
@@ -868,7 +902,7 @@ class Gateway extends Entity {
         this.h = 3;
 
         //BOUNDS
-        this.bounds = new $BOUNDS.bounds.box(x, y, this.w, this.h);
+        this.bounds = new $BOUNDS.bounds.box(x-(1.5/2), y-(1.5/2), this.w, this.h);
 
         //FUNCTIONALITY
         this.open = false;
@@ -887,7 +921,7 @@ class Gateway extends Entity {
             });
         }
 
-        this.type = 'barrel';
+        this.type = 'gateway';
     }
 
     onAction (func) {
@@ -902,6 +936,8 @@ class Gateway extends Entity {
         return {
             x: this.x,
             y: this.y,
+            end: this.end,
+            open: this.open,
             type: this.type,
             id: this.id,
             alive: this.alive
@@ -980,7 +1016,8 @@ const $ENTITIES = {
     //ENEMIES
     enemies: {
         enemy: Enemy,
-        wolf: Wolf
+        wolf: Wolf,
+        centurion: Centurion
     }
 };
 
