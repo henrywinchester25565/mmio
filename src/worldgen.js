@@ -892,6 +892,12 @@ class WorldGen {
             attempts --;
         }
 
+        //CHANGE NODE BOUNDS TO CIRCLES
+        for (let i = 0; i < this.graph.nodes.length; i++) {
+            let curNode = this.graph.nodes[i];
+            curNode.bounds = new $BOUNDS.bounds.circle(curNode.pos.x, curNode.pos.y, 2);
+        }
+
         //SPAWN AND EXIT
         //Spawn
         pos       = this.graph.nodes[0].pos;
@@ -907,11 +913,31 @@ class WorldGen {
         world.queueChild(exit);
         this.exit = exit;
 
+        //FURNACE
+        //Max three, place on nodes
+        let furnaces = 3 < (this.graph.nodes.length-2) ? Math.round(Math.random()*3) : Math.round(Math.random()*(this.graph.nodes.length-2));
+        console.log('>>>', furnaces, 'furnaces');
+        for (let i = 0; i < furnaces; i++) {
+            pos = undefined;
+            while (!pos) {
+                let index = 1 + Math.round(Math.random() * (this.graph.nodes.length-2)); //Not start or exit
+                let curNode = this.graph.nodes[index];
+                if (this.canvas.canvas[curNode.pos.x][curNode.pos.y] === $PAINT.path) {
+                    pos = curNode.pos;
+                }
+            }
 
+            //Place furnace
+            let furnace = new $ENTITY.enemies.furnace(pos.x+0.5, pos.y+0.5, this.graph.nodes); //Not sure why correction is needed, but it works
+            this.canvas.paint(pos, $PAINT.enemy, 1);
+            world.queueChild(furnace);
+            this.enemies.push(furnace);
+        }
 
         //ENTITIES
         //Add barrels
-        let barrels = Math.random() * this.graph.edges.length;
+        let barrels = Math.round(this.graph.nodes.length*0.5 + Math.random() * this.graph.edges.length);
+        console.log('>>>', barrels, 'barrels');
         for (let i = 0; i < barrels; i++) {
             pos = {x: 0, y: 0};
             let walls = false;
@@ -935,8 +961,9 @@ class WorldGen {
         }
 
         //Add enemies
-        let enemyTypes = ['wolf', 'centurion'];
-        let enemies =  4 + Math.random() * this.graph.edges.length * 0.25;
+        let enemyTypes = ['wolf'];
+        let enemies = Math.round(this.graph.nodes.length*0.3 + Math.random() * this.graph.edges.length * 0.25);
+        console.log('>>>', enemies, 'enemies');
         for (let i = 0; i < enemies; i++) {
             pos = {x: 0, y: 0};
             let walls = false;
