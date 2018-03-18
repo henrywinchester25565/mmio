@@ -363,6 +363,11 @@ class Circle {
         this.update(x, y);
     }
 
+    set r (r) { //For changing size of bounds easily
+        this.radius = r;
+        this.update(this.x, this.y);
+    }
+
     update (x, y) {
         this.x = x;
         this.y = y;
