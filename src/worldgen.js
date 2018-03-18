@@ -902,7 +902,7 @@ class WorldGen {
 
         //Exit
         pos       = this.graph.nodes[this.graph.nodes.length-1].pos;
-        let exit  = new $ENTITY.gateway(pos.x, pos.y, true);
+        let exit  = new $ENTITY.gateway(pos.x+0.5, pos.y+0.5, true);
         this.canvas.paint(pos, $PAINT.gate, 1);
         world.queueChild(exit);
         this.exit = exit;
