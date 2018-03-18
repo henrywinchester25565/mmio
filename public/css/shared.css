@@ -1,5 +1,5 @@
 /* Fonts */
-@import url('https://fonts.googleapis.com/css?family=Comfortaa');
+@import url('https://fonts.googleapis.com/css?family=Comfortaa|Raleway');
 
 /* Structural */
 html {
@@ -86,6 +86,10 @@ h1.title {
 h2 {
 	font-family: 'Comfortaa', cursive;
 	font-size: 16px;
+}
+
+h3 {
+	font-family: 'Raleway', cursive;
 }
 
 /* Functionality */
