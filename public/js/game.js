@@ -524,29 +524,25 @@ class Physics extends Dynamic {
         return 'phys';
     }
 
-    constructor (id, x, y) {
-        super(id, x, y);
-
-        let self = this;
-        this.events.on('kill', function () {
-            self.obj.material.emissiveIntensity = 0;
-            self.obj.geometry.dispose();
-            self.obj.material.dispose();
-        });
+    constructor (id, x, y, a) {
+        super(id, x, y, a);
     }
 
     init () {
-        let geo = new THREE.CylinderBufferGeometry(0.15, 0.15, 0.3);
-        geo.rotateX(Math.PI/2);
-        let mat = new THREE.MeshPhongMaterial();
-        let obj = new THREE.Mesh(geo, mat);
-        obj.receiveShadow = true;
-        this.obj = obj;
-        return obj;
+        let obj = objects['mageattack'].clone();
+        obj.rotation.x = Math.PI/2;
+        obj.rotation.y = Math.PI/2;
+
+        let group = new THREE.Group();
+        group.position.set(this.x, this.y, 0);
+        group.add(obj);
+
+        this.obj = group;
+        return group;
     }
 
     static fromScrape (scrape) {
-        return new Physics(scrape.id, scrape.x, scrape.y);
+        return new Physics(scrape.id, scrape.x, scrape.y, scrape.a);
     }
 
 }
@@ -692,22 +688,23 @@ class Player extends Dynamic {
             ctx.fillText(self.nick, x, y);
 
             ctx.lineWidth   = 100/camera.z;
+            let angle, start, end;
 
             //Health
             ctx.strokeStyle = '#ffffff';
             ctx.beginPath();
-            let angle = (Math.PI * 2) / 3 - (self.health * Math.PI * 2 / 3);
-            let start = Math.PI / 6 + angle / 2;
-            let end = (Math.PI * 5) / 6 - angle / 2;
+            angle = (Math.PI * 2) / 3 - (self.health * Math.PI * 2 / 3);
+            start = Math.PI / 6 + angle / 2;
+            end = (Math.PI * 5) / 6 - angle / 2;
             ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
             ctx.stroke();
 
             //Ammo
             ctx.strokeStyle = '#5092fc';
             ctx.beginPath();
-            let angle = (Math.PI*2)/3 - (self.ammo * Math.PI * 2/3);
-            let start = (Math.PI*3)/2 + angle/2;
-            let end   = Math.PI/6 - angle/2;
+            angle = (Math.PI*2)/3 - (self.ammo * Math.PI * 2/3);
+            start = (Math.PI*3)/2 + angle/2;
+            end   = Math.PI/6 - angle/2;
             ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
             ctx.stroke();
 
@@ -869,7 +866,8 @@ class Camera {
         this.hudCanvas.height = this.height;
         this.hudMap           = this.hudCanvas.getContext('2d');
 
-        this.hudMap.textAlign = 'center';
+        this.hudMap.globalAlpha = 0.6;
+        this.hudMap.textAlign   = 'center';
 
         //When the window is resized...
         let self = this;
@@ -1326,7 +1324,7 @@ function init () {
     //OPEN SOCKET
     socket = io();
     socket.on('dead', function () {
-        init(); //RESTART
+        location.reload(); //RESTART
     });
 
     //EVENTS
@@ -1446,6 +1444,11 @@ assetQueue.push({
     type: 'obj',
     location: 'models/furnace.json',
     name: 'furnace'
+});
+assetQueue.push({
+    type: 'obj',
+    location: 'models/mageattack.json',
+    name: 'mageattack'
 });
 
 loadAssets();
