@@ -1098,6 +1098,26 @@ function username (online) {
     hint.appendChild(hintText);
     container.appendChild(hint);
 
+    let spacingTwo = document.createElement('div');
+    spacingTwo.style.padding = '2vh';
+    container.append(spacingTwo);
+
+    //CONTROLS
+    let howTo    = document.createElement('h3');
+    howTo.innerHTML = 'HOW TO PLAY';
+    howTo.className =  "text-center text-gray";
+    let controls = document.createElement('h4');
+    controls.className =  "text-center text-gray";
+    controls.innerHTML = 'WASD to move, MOUSE to aim and LEFT CLICK for main attack' +
+        '<br>R to RELOAD, F for SECONDARY and SPACE for charged SPECIAL' +
+        '<br>E to USE chests and I to open the INVENTORY' +
+        '<br>WHITE = HEALTH, BLUE = AMMO, GREEN = CHARGE' +
+        '<br>once all the ENEMIES are dead, head to the EXIT' +
+        '<br><br> press F11 (FULLSCREEN) for full experience';
+    container.appendChild(howTo);
+    container.appendChild(controls);
+    
+    //ONLINE PLAYER COUNT
     let onlinePlys = document.createElement('h3');
     onlinePlys.className = "text-center text-gray";
     let onlinePlysText = document.createTextNode(online + ' PLAYERS ARE ONLINE');
@@ -1223,6 +1243,10 @@ function init () {
 
     //OPEN SOCKET
     socket = io();
+    socket.on('dead', function () {
+        init(); //RESTART
+    });
+
     //EVENTS
     /*
     
@@ -1268,6 +1292,7 @@ function init () {
     //MOUSE BUTTONS
     document.addEventListener('click', function (event) {
         let btn = 'Mouse' + event.button;
+        console.log(btn);
         let index = btns.indexOf(btn);
         if (index === -1) {
             btns.push(btn);
@@ -1276,14 +1301,14 @@ function init () {
 
     //SEND SERVER INPUTS EVERY 33ms
     window.setInterval(function(){
-        inputs = [];
-        for (let i = 0; i < keys.length; i++) {
-            inputs.push({type: 'key', value: keys[i]});
-        }
-        for (let i = 0; i < btns.length; i++) {
-            inputs.push({type: 'btn', value: btns[i]});
-        }
         if (world) {
+            inputs = [];
+            for (let i = 0; i < keys.length; i++) {
+                inputs.push({type: 'key', value: keys[i]});
+            }
+            for (let i = 0; i < btns.length; i++) {
+                inputs.push({type: 'btn', value: btns[i]});
+            }
             inputs.push({type: 'mouse', value: {x: world.mouse.x, y: world.mouse.y}});
         }
         socket.emit('input', inputs);
@@ -1338,3 +1363,6 @@ assetQueue.push({
 });
 
 loadAssets();
+
+//Stop context menu from right click
+document.addEventListener('contextmenu', event => event.preventDefault());
