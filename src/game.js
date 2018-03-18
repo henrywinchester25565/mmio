@@ -292,6 +292,18 @@ class Game {
                                 case 'KeyD':
                                     dir = $VECTOR.add(dir, {x: 1, y: 0});
                                     break;
+                                case 'KeyR':
+                                    ply.entity.reload();
+                                    break;
+                                case 'KeyF': //Secondary
+                                    ply.entity.attackPrimary(target);
+                                    //Add latest weapons to world
+                                    if (ply.entity.weapons.length > 0) {
+                                        while (ply.entity.weapons.length > 0) {
+                                            self.world.addChild(ply.entity.weapons.pop());
+                                        }
+                                    }
+                                    break;
                             }
                         }
                         if (dir.x !== 0 || dir.y !== 0) {
@@ -306,9 +318,12 @@ class Game {
                             switch (ply.btns[j]) {
                                 case 'Mouse0':
                                     ply.entity.attackPrimary(target);
-                                    //Add latest weapon to world
+                                    //Add latest weapons to world
                                     if (ply.entity.weapons.length > 0) {
-                                        self.world.addChild(ply.entity.weapons[ply.entity.weapons.length - 1]);
+                                        //Adds any new weapons then disposes of them from player references
+                                        while (ply.entity.weapons.length > 0) {
+                                            self.world.addChild(ply.entity.weapons.pop());
+                                        }
                                     }
                                     break;
                             }
