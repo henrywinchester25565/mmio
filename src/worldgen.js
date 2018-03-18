@@ -905,6 +905,8 @@ class WorldGen {
         this.canvas.paint(pos, $PAINT.gate, 1);
         world.queueChild(spawn);
         this.spawn = spawn;
+        dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, pos), this.graph.nodes[1].pos));
+        this.spawn.dir = dir; //used by game to propell players from spawn
 
         //Exit
         pos       = this.graph.nodes[this.graph.nodes.length-1].pos;
@@ -962,7 +964,7 @@ class WorldGen {
 
         //Add enemies
         let enemyTypes = ['wolf'];
-        let enemies = Math.round(this.graph.nodes.length*0.2 + Math.random() * this.graph.edges.length*0.4);
+        let enemies = Math.round(this.graph.nodes.length*0.4 + Math.random() * this.graph.edges.length*0.4);
         console.log('>>>', enemies, 'enemies');
         for (let i = 0; i < enemies; i++) {
             pos = {x: 0, y: 0};
