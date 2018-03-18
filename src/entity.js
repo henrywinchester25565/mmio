@@ -385,8 +385,8 @@ class Barrel extends Physics {
         this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
 
         //BEHAVIOUR
-        this.maxHealth = 2;
-        this.health = 2;
+        this.maxHealth = 3;
+        this.health = 3;
 
         let self = this;
         //Damaged
@@ -443,7 +443,7 @@ class Projectile extends Physics {
         this.friendly = true;
 
         this.lifespan = lifespan || 2000; //ms
-        this.colCount = 1; //Number of collisions before death
+        this.colCount = 0; //Number of collisions before death
 
         this.source = undefined; //Placed here for doc reasons - know there is a property called source
 
@@ -513,17 +513,20 @@ class Enemy extends Physics {
         this.health    = health || 3;
 
         //BEHAVIOUR
+        this.ai        = true;
         this.friendly  = false;
         this.damage    = 1;
         this.follow    = new $BOUNDS.bounds.circle(x, y, follow || 12); //Circle bounds to tell if players inside
         this.flee      = flee || 0;  //Radius of enemies to flee
         this.minHealth = 0; //If health falls below, flee
         this.xp        = 10;
+        this.hitxp     = 5;
 
         //Active weapons
         this.weapons = [];
 
         this.state = $AI_STATES.still; //Enum indicating how the enemy should behave
+        this.nearest = undefined; //Nearest player
 
         let self = this;
         //Damage
@@ -541,7 +544,7 @@ class Enemy extends Physics {
                 else {
                     //Give player charge - 5 for hit
                     if (entity.source) {
-                        entity.source.gainXP(5);
+                        entity.source.gainXP(self.hitxp);
                     }
                 }
             }
@@ -578,24 +581,27 @@ class Enemy extends Physics {
 
                     //Flee if nearest is below flee radius
                     if (min <= self.flee || self.health <= self.minHealth) {
-                        self.state = $AI_STATES.flee;
-                        dir = $VECTOR.pro(-1, dir); //Move away from nearest player
+                        self.state = $AI_STATES.flee; //Handle own fleeing behaviour
                     }
                     else {
                         self.state = $AI_STATES.follow;
+                        //Move in direction of player
+                        let force = $VECTOR.pro(dir, self.force);
+                        self.forces.push(force);
+
+                        //Look at target
+                        dir.x = dir.x * -1; //Not sure why I have to do this
+                        self.a = $VECTOR.ang(dir);
                     }
-
-                    let force = $VECTOR.pro(dir, self.force);
-                    self.forces.push(force);
-
-                    //Look at target
-                    dir.x = dir.x * -1; //Not sure why I have to do this
-                    self.a = $VECTOR.ang(dir);
                 }
 
+                //For other actions to use
+                self.nearest = nearest;
             }
             else {
                 self.state = $AI_STATES.still;
+                //No nearest
+                self.nearest = undefined;
             }
         });
 
@@ -653,14 +659,60 @@ class Wolf extends Enemy {
 class Centurion extends Enemy {
 
     constructor (x, y) {
-        super(x, y, 100, 1200, 4);
+        super(x, y, 100, 1200, 4, 20);
         this.minHealth = 1;
+        this.xp        = 30;
+        this.hitxp     = 10;
 
         //PHYSICS
         this.radius = 0.9;
 
         //Area for drag
         this.area = this.radius * this.radius;
+
+        this.source = undefined; //Set when created by furnace, otherwise gone
+        this.node   = undefined; //Set when fleeing
+
+        let self = this;
+        //Flee behaviour
+        this.onAction(function () {
+            if (self.state === $AI_STATES.flee) {
+
+                //If furnace still alive
+                if (self.source) {
+                    //If has a node to move to, check if inside bounds, or if no node
+                    //Doesn't work every time to get to furnace because of walls blocking nearest nodes
+                    //But it's better than nothing
+                    if (!self.node || (self.node && self.node.bounds.inBounds(self.bounds))) {
+                        self.node = self.source.nextNode(self.x, self.y, self.node);
+                    }
+
+                    //Move towards node
+                    let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: self.x, y: self.y}), self.node.pos));
+
+                    let force = $VECTOR.pro(self.force, dir);
+                    self.forces.push(force);
+
+                    //Look at target
+                    dir.x = dir.x * -1;
+                    self.a = $VECTOR.ang(dir);
+                }
+                //Move away from nearest player
+                else if (self.nearest) {
+                    let ply = self.nearest;
+                    let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: ply.x, y: ply.y}), {x: self.x, y: self.y}));
+
+                    let force = $VECTOR.pro(dir, self.force);
+                    self.forces.push(force);
+
+                    //Look at target
+                    dir.x = dir.x * -1;
+                    self.a = $VECTOR.ang(dir);
+                }
+
+                //Otherwise stay put
+            }
+        });
 
         //BOUNDS
         this.bounds = new $BOUNDS.bounds.circle(x, y, this.radius);
@@ -675,6 +727,196 @@ class Centurion extends Enemy {
             a: this.a,
             health: this.health/this.maxHealth,
             state: this.state,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+//FURNACE
+//A static enemy that creates and heals centurions
+class Furnace extends Entity {
+
+    constructor (x, y, nodes) {
+        super(x, y);
+
+        //PHYSICS
+        this.collides = false;
+        this.w = 3;
+        this.h = 3;
+
+        //FUNCTIONALITY
+        //Slightly larger than model
+        this.healing = new $BOUNDS.bounds.circle(this.x, this.y, 2);
+        this.healRate = 2000;
+        this.lastHeal = 2000;
+
+        this.children     = [];
+        this.maxChildren  = 2;
+        this.childRate    = 8000;
+        this.lastChild    = 8000;
+        this.follow       = new $BOUNDS.bounds.circle(this.x, this.y, 20); //Start creating children
+        this.makeChildren = false;
+
+        this.health    = 12;
+        this.maxHealth = 12;
+        this.xp        = 200;
+        this.hitxp     = 40;
+
+        this.weapons = []; //Children added into weapons so added to game
+
+        this.nodes = nodes;
+        this.node  = this.nearestNode(x, y);
+
+        let self = this;
+        //Damage
+        this.onCollide(function (entity) {
+            if (entity.friendly && entity.damage > 0) {
+                self.health--;
+                if (entity.source) {entity.source.gainXP(self.hitxp);}
+                if (self.health <= 0) {
+                    self.kill();
+                    if (entity.source) {entity.source.gainXP(self.xp);}
+                }
+            }
+        });
+
+        //Remove references to self from children on death
+        this.onKill(function () {
+            for (let i = 0; i < self.children.length; i++) {
+                delete self.children[i].source;
+            }
+        });
+
+        this.onAction(function (players) {
+            if (players.length > 0) {
+                self.makeChildren = true;
+            }
+            else {
+                self.makeChildren = false;
+            }
+        });
+
+        //Check for children to heal
+        this.onUpdate(function (dt) {
+            if (self.lastHeal < self.healRate) {
+                self.lastHeal = self.healRate + dt;
+            }
+            else {
+                let heal = [];
+                for (let i = 0; i < self.children.length; i++) {
+                    if (self.children[i].bounds.inBounds(self.healing)) {
+                        heal.push(self.children[i]);
+                    }
+                }
+
+                //Add health to each child
+                for (let i = 0; i < heal.length; i++) {
+                    if (heal[i].health < heal[i].maxHealth) {
+                        heal[i].health = heal[i].health + 1;
+                    }
+                }
+
+                self.lastHeal = 0;
+            }
+
+            self.changed = true; //progress changed
+        });
+
+        //Create centurions
+        this.onUpdate(function (dt) {
+            if (self.lastChild < self.childRate) {
+                self.lastChild = self.lastChild + dt;
+            }
+            else if (self.children.length < self.maxChildren && self.makeChildren) {
+                //Baby making time
+                //Random angle
+                let angle = Math.random() * 2*Math.PI;
+                let force = {x: 12000 * Math.cos(angle), y: 12000 * Math.sin(angle)};
+
+                let centurion = new Centurion(self.x, self.y);
+                centurion.source = self;
+                centurion.forces.push(force);
+
+                centurion.onKill(function () {
+                    let index = self.children.indexOf(centurion);
+                    if (index > -1) {
+                        self.children.splice(index, 1);
+                    }
+                });
+
+                self.children.push(centurion);
+                self.weapons.push(centurion);
+
+                self.lastChild = 0;
+            }
+        });
+
+        //BOUNDS (for collision)
+        //Smaller than actual size so only collides with insides
+        this.bounds = new $BOUNDS.bounds.box(this.x - (0.5), this.y - (0.5), 1, 1);
+
+        this.type = 'furnace';
+    }
+
+    nearestNode (x, y) {
+        let pos = {x: x, y: y};
+
+        let node = this.nodes[0];
+        let min  = $VECTOR.mag($VECTOR.add($VECTOR.pro(-1, pos), node.pos));//Distance
+        for (let i = 0; i < this.nodes.length; i++) {
+
+            let mag = $VECTOR.mag($VECTOR.add($VECTOR.pro(-1, pos), this.nodes[i].pos));
+            if (mag < min) {
+                min = mag;
+                node = this.nodes[i];
+            }
+
+        }
+        return node;
+    }
+
+    nextNode (x, y, node) {
+        let mag = $VECTOR.mag($VECTOR.add($VECTOR.pro(-1, {x: x, y: y}), {x: this.x, y: this.y}));//Distance
+        if (mag < 30 || node === this.node) {
+            return {pos: {x: this.x, y: this.y}, bounds: this.bounds}; //Move to furnace
+        }
+        //Node is defined and not the same as nearest node
+        else if (node) {
+            let i1 = this.nodes.indexOf(this.node);
+            let i2 = this.nodes.indexOf(node);
+
+            let dir = i1-i2;
+            dir = dir/dir; //Direction to go through node array
+
+            let index = i1+dir;
+            //Index in nodes array
+            return this.nodes[index];
+        }
+        //If no node
+        else {
+            return this.nearestNode(x, y);
+        }
+
+    }
+
+    //Healing functionality
+    onAction (func) {
+        this.events.on('action', func);
+    }
+
+    action (players) {
+        this.events.emit('action', players);
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            health: this.health/this.maxHealth,
+            progress: this.lastChild/this.childRate,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -719,7 +961,7 @@ class Player extends Physics {
         this.health    = health || 10;
 
         //Player special charge
-        this.maxCharge = charge || 100;
+        this.maxCharge = charge || 200;
         this.charge    = 0;
 
         //Attack ammo
@@ -864,10 +1106,13 @@ class Player extends Physics {
 class Mage extends Player {
 
     constructor (x, y) {
-        super(x, y, 0.6, 8, 7, 100);
+        super(x, y, 0.6, 8, 8, 100);
+
+        this.ammoToHealth = 6;
 
         //ATTACK BEHAVIOUR
         let self = this;
+        //Shoot projectile
         this.onAttackPrimary(function (target) {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 //Direction from centre to target vector
@@ -889,6 +1134,16 @@ class Mage extends Player {
 
                 self.ammo--;
                 self.lastRound = 0;
+            }
+        });
+
+        //Heal one for each seven ammo
+        this.onAttackSecondary(function () {
+            if (self.ammo > 0 && self.lastRound >= self.fireRate) {
+                if (self.health < self.maxHealth && self.ammo >= self.ammoToHealth) {
+                    self.health++;
+                    self.ammo = self.ammo - self.ammoToHealth
+                }
             }
         });
 
@@ -1033,7 +1288,8 @@ const $ENTITIES = {
     enemies: {
         enemy: Enemy,
         wolf: Wolf,
-        centurion: Centurion
+        centurion: Centurion,
+        furnace: Furnace
     }
 };
 
