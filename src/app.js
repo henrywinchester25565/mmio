@@ -204,6 +204,20 @@ const $PLY_DISCONNECT = function (socket) {
             ply.game.killPlayer(ply);
         }
 
+        //Remove from rankings
+        let rank = ply.level;
+        if ($RANKING.hasOwnProperty(rank)) {
+            let index = $RANKING[rank].indexOf(ply);
+            if (index > -1) {
+                $RANKING[rank].splice(index, 1);
+
+                //If none left in rank delete rank
+                if ($RANKING[rank].length <= 0) {
+                    delete $RANKING[rank];
+                }
+            }
+        }
+
         //Clear username for others to use
         let index = $USERNAMES.indexOf(ply.nick);
         if (index > -1) {
