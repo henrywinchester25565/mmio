@@ -936,7 +936,7 @@ class WorldGen {
 
         //ENTITIES
         //Add barrels
-        let barrels = Math.round(this.graph.nodes.length*0.5 + Math.random() * this.graph.edges.length);
+        let barrels = Math.round(this.graph.nodes.length*0.5 + Math.random() * this.graph.edges.length*0.3);
         console.log('>>>', barrels, 'barrels');
         for (let i = 0; i < barrels; i++) {
             pos = {x: 0, y: 0};
@@ -962,7 +962,7 @@ class WorldGen {
 
         //Add enemies
         let enemyTypes = ['wolf'];
-        let enemies = Math.round(this.graph.nodes.length*0.3 + Math.random() * this.graph.edges.length * 0.25);
+        let enemies = Math.round(this.graph.nodes.length*0.2 + Math.random() * this.graph.edges.length*0.4);
         console.log('>>>', enemies, 'enemies');
         for (let i = 0; i < enemies; i++) {
             pos = {x: 0, y: 0};
