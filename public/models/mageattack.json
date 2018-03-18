@@ -120,6 +120,7 @@
 		"type": "Mesh",
 		"name": "Attack",
 		"castShadow": true,
+		"receiveShadow": true,
 		"matrix": [4,0,0,0,0,4,0,0,0,0,4,0,0,0,0,1],
 		"geometry": "7B5D1A6D-B0E6-448E-8839-B7637A79D30C",
 		"material": "97EBBA5B-EC26-4298-854E-84421A477E19"
