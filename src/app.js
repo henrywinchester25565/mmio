@@ -20,7 +20,6 @@ console.log('');
 //
 //I declare functions as constant variables. They don't get hoisted by I prefer to treat them entirely like objects,
 //and it helps when thinking about structure.
-//I might change this later on, but I don't think I need to.
 
 //LOADED
 console.log("Loaded: app.js");
