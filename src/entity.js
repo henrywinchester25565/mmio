@@ -767,6 +767,28 @@ class Player extends Physics {
                 self.lastDmg = self.lastDmg + dt;
             }
         });
+
+        //Reload
+        this.onUpdate(function (dt) {
+            if (self.ammo <= 0) {
+                //Reload
+                self.cooldown = self.cooldown - dt;
+                if (self.cooldown <= 0) {
+                    self.cooldown = self.cooldownTime;
+                    self.ammo = self.maxAmmo; //Add ammo
+                }
+            }
+            //Fire rate
+            if (self.lastRound < self.fireRate) {
+                self.lastRound = self.lastRound + dt;
+            }
+        });
+
+        //Force reload
+        this.onReload(function () {
+            self.ammo = 0;
+        });
+
     }
     
     //Primary Attack Event
@@ -794,6 +816,15 @@ class Player extends Physics {
 
     attackSpecial (target) {
         this.events.emit('attack_special', target);
+    }
+
+    //Reload event
+    onReload (func) {
+        this.events.on('reload', func);
+    }
+
+    reload () {
+        this.events.emit('reload');
     }
 
     //When gateway makes exit
@@ -861,21 +892,6 @@ class Mage extends Player {
             }
         });
 
-        //Reload
-        this.onUpdate(function (dt) {
-            if (self.ammo <= 0) {
-                //Reload
-                self.cooldown = self.cooldown - dt;
-                if (self.cooldown <= 0) {
-                    self.cooldown = self.cooldownTime;
-                    self.ammo = self.maxAmmo; //Add ammo
-                }
-            }
-            //Fire rate
-            if (self.lastRound < self.fireRate) {
-                self.lastRound = self.lastRound + dt;
-            }
-        });
     }
 
 }
