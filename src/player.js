@@ -23,7 +23,8 @@ class Player {
         this.id = socket.id;
         this.nick = username;
 
-        this.game = undefined; //Set when starting a new game
+        this.game   = undefined; //Set when starting a new game
+        this.active = false;
 
         this.events = new $EVENTS.handler();
 
@@ -37,31 +38,33 @@ class Player {
 
         let self = this;
         this.socket.on('input', function (inputs) {
-            self.keys = [];
-            if (Array.isArray(inputs)) {
-                for (let i = 0; i < inputs.length; i++) {
-                    if (typeof inputs[i].type === 'string') {
-                        let input = inputs[i];
+            if (self.active) {
+                self.keys = [];
+                if (Array.isArray(inputs)) {
+                    for (let i = 0; i < inputs.length; i++) {
+                        if (typeof inputs[i].type === 'string') {
+                            let input = inputs[i];
 
-                        switch (input.type) {
-                            case 'key':
-                                if (typeof input.value === 'string') {
-                                    self.keys.push(input.value);
-                                }
-                                break;
-                            case 'mouse':
-                                if (typeof input.value.x === 'number' && typeof input.value.y === 'number') {
-                                    self.mouse.x = input.value.x;
-                                    self.mouse.y = input.value.y;
-                                }
-                                break;
-                            case 'btn':
-                                if (typeof input.value === 'string') {
-                                    self.btns.push(input.value);
-                                }
-                                break;
+                            switch (input.type) {
+                                case 'key':
+                                    if (typeof input.value === 'string') {
+                                        self.keys.push(input.value);
+                                    }
+                                    break;
+                                case 'mouse':
+                                    if (typeof input.value.x === 'number' && typeof input.value.y === 'number') {
+                                        self.mouse.x = input.value.x;
+                                        self.mouse.y = input.value.y;
+                                    }
+                                    break;
+                                case 'btn':
+                                    if (typeof input.value === 'string') {
+                                        self.btns.push(input.value);
+                                    }
+                                    break;
+                            }
+
                         }
-
                     }
                 }
             }
@@ -71,13 +74,13 @@ class Player {
         this.inventory = [];
         this.plyClass = plyClass || 'mage';
         this.stats = {};
-        this.xp = 0;
 
         this.entity = undefined; //Created at start of game
     }
 
     generateEntity () {
         let entity = new $ENTITY.players[this.plyClass](2,2);
+        entity.collides = false; //Until made collide OK by game
         this.entity = entity;
         this.entity.nick = this.nick;
 
@@ -85,9 +88,9 @@ class Player {
         let self = this;
         this.entity.onExit(function () {
             self.xp = self.xp + self.entity.xp;
-            console.log(self.entity.xp);
-            self.level = Math.floor(self.xp/1000);
+            self.level = Math.floor(self.xp/200);
             self.entity = undefined; //Lose entity connection
+            self.active = false;
             self.exit();
         });
 
