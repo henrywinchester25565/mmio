@@ -16,6 +16,7 @@ const $PLY_STATE = {
 
 //PLAYER CLASS FOR PLAYER HANDLING
 class Player {
+
     constructor (socket, username, plyClass) {
         this.type = 'player';
         this.socket = socket;
@@ -26,6 +27,7 @@ class Player {
 
         this.events = new $EVENTS.handler();
 
+        this.xp    = 1000;
         this.level = 1;
 
         //INPUT
@@ -75,14 +77,23 @@ class Player {
     }
 
     generateEntity () {
-        this.entity = new $ENTITY.players[this.plyClass](2,2);
+        let entity = new $ENTITY.players[this.plyClass](2,2);
+        this.entity = entity;
         this.entity.nick = this.nick;
 
         //When entity exits game
         let self = this;
         this.entity.onExit(function () {
+            self.xp = self.xp + self.entity.xp;
+            self.level = Math.floor(self.xp/1000);
             self.entity = undefined; //Lose entity connection
             self.exit();
+        });
+
+        this.entity.onKill(function () {
+            if (self.entity === entity) {
+                self.socket.emit('dead');
+            }
         });
 
         //Send player entity to game
@@ -96,7 +107,6 @@ class Player {
     exit () {
         this.events.emit('exit');
         this.socket.emit('exit');
-        this.level++;
     }
 
 }
