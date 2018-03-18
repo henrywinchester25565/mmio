@@ -1154,7 +1154,7 @@ class Mage extends Player {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 if (self.health < self.maxHealth && self.ammo >= self.ammoToHealth) {
                     let health = self.health + 3;
-                    self.health = health > self.maxHealth ? health : self.health;
+                    self.health = health > self.maxHealth ? self.maxHealth : health;
                     self.ammo = self.ammo - self.ammoToHealth
                 }
             }
