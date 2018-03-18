@@ -650,10 +650,10 @@ class Wolf extends Enemy {
 
 //CENTURION
 //Large, powerful and more complex enemy
-class Centurion extends Wolf {
+class Centurion extends Enemy {
 
     constructor (x, y) {
-        super(x, y, 100, 1000, 4);
+        super(x, y, 100, 1200, 4);
         this.minHealth = 1;
 
         //PHYSICS
