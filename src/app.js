@@ -206,14 +206,16 @@ const $PLY_DISCONNECT = function (socket) {
 
         //Remove from rankings
         let rank = ply.level;
-        if ($RANKING.hasOwnProperty(rank)) {
-            let index = $RANKING[rank].indexOf(ply);
-            if (index > -1) {
-                $RANKING[rank].splice(index, 1);
+        for (let i = rank; i > 0 && i > rank-2; i--) { //Check rank below too
+            if ($RANKING.hasOwnProperty(i)) {
+                let index = $RANKING[i].indexOf(ply);
+                if (index > -1) {
+                    $RANKING[i].splice(index, 1);
 
-                //If none left in rank delete rank
-                if ($RANKING[rank].length <= 0) {
-                    delete $RANKING[rank];
+                    //If none left in i delete i
+                    if ($RANKING[i].length <= 0) {
+                        delete $RANKING[i];
+                    }
                 }
             }
         }
