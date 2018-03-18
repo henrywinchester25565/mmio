@@ -27,7 +27,7 @@ class Player {
 
         this.events = new $EVENTS.handler();
 
-        this.xp    = 1000;
+        this.xp    = 1100;
         this.level = 1;
 
         //INPUT
@@ -85,6 +85,7 @@ class Player {
         let self = this;
         this.entity.onExit(function () {
             self.xp = self.xp + self.entity.xp;
+            console.log(self.entity.xp);
             self.level = Math.floor(self.xp/1000);
             self.entity = undefined; //Lose entity connection
             self.exit();
