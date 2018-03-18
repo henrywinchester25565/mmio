@@ -49,6 +49,7 @@ class Game {
 
         //FUNCTIONALITY
         this.changed = []; //Entities changed since last update
+        this.ai      = false; //Until game properly starts
 
         let self = this;
         //AI behaviour & gateways
@@ -104,7 +105,9 @@ class Game {
 
             //Trigger action event on enemies
             for (let i = 0; i < enemyBounds.length; i++) {
-                enemyBounds[i].ent.action(enemyBounds[i].players); //Pass collided players as parameter
+                if (self.ai) {
+                    enemyBounds[i].ent.action(enemyBounds[i].players); //Pass collided players as parameter
+                }
             }
 
             //Add new weapons from all players
@@ -190,8 +193,8 @@ class Game {
 
             ply.entity.x = this.spawn.x;
             ply.entity.y = this.spawn.y;
-            //TODO apply random force
-            this.world.addChild(ply.entity);
+
+            this.world.queueChild(ply.entity);
         }
 
         //If max players, start game
@@ -257,6 +260,24 @@ class Game {
         }
 
         let self = this;
+        //Propel players from spawn, and add to world
+        let players = this.players.slice(0);
+        players.reverse();
+        let propel  = function () {
+            let force = $VECTOR.pro(15000*self.players.length, self.spawn.dir);
+            let ply = players.pop();
+            ply.entity.forces.push(force);
+            ply.entity.collides = true;
+            ply.active          = true;
+            if (players.length > 0) { //Still more players
+                setTimeout(propel, 350);
+            }
+            else {
+                self.ai = true;
+            }
+        };
+        propel();
+
         //Send updates every 50ms
         let updateClients = function () {
             if (self.state === $GAME_STATE.running) {
