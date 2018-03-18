@@ -8,6 +8,12 @@ console.log("Loaded: player.js");
 const $ENTITY = require('./entity.js');
 const $EVENTS = require('./events.js');
 
+//PLAYER STATES
+const $PLY_STATE = {
+    lobby: 0,
+    game: 1
+};
+
 //PLAYER CLASS FOR PLAYER HANDLING
 class Player {
     constructor (socket, username, plyClass) {
@@ -75,12 +81,8 @@ class Player {
         //When entity exits game
         let self = this;
         this.entity.onExit(function () {
-            self.entity = undefined;
+            self.entity = undefined; //Lose entity connection
             self.exit();
-        });
-        //If entity dies before it exits
-        this.entity.onKill(function () {
-            self.socket.emit('dead');
         });
 
         //Send player entity to game
