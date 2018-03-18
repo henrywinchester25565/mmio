@@ -75,7 +75,12 @@ class Player {
         //When entity exits game
         let self = this;
         this.entity.onExit(function () {
+            self.entity = undefined;
             self.exit();
+        });
+        //If entity dies before it exits
+        this.entity.onKill(function () {
+            self.socket.emit('dead');
         });
 
         //Send player entity to game
