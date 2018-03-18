@@ -1152,8 +1152,9 @@ class Mage extends Player {
         //Heal one for each seven ammo
         this.onAttackSecondary(function () {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
-                if (self.health < self.maxHealth-3 && self.ammo >= self.ammoToHealth) {
-                    self.health = self.health + 3;
+                if (self.health < self.maxHealth && self.ammo >= self.ammoToHealth) {
+                    let health = self.health + 3;
+                    self.health = self.maxHealth > health ? health : self.health;
                     self.ammo = self.ammo - self.ammoToHealth
                 }
             }
