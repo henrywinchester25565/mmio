@@ -354,6 +354,79 @@ class Gateway extends Entity {
 }
 entities[Gateway.type] = Gateway;
 
+class Furnace extends Entity {
+
+    static get type () {
+        return 'furnace';
+    }
+
+    constructor (id, x, y, health, progress) {
+        super (id, x, y);
+        this.health = health || 1;
+        this.progress = progress || 1;
+
+        this.hudRadius = 1500;
+        
+        let self = this;
+        this.events.on('update', function (scrape) {
+            self.health = scrape.health;
+            self.progress = scrape.progress;
+        });
+
+        //Draw health and progress bars
+        this.events.on('hud', function (camera) {
+            let pos2D = camera.positionToCamera(self.x, self.y, 0);
+            let ctx = camera.hudMap;
+
+            ctx.lineWidth   = 100/camera.z;
+
+            let angle, start, end;
+            
+            //Health
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            angle = (Math.PI) - (self.health * Math.PI);
+            start = 0 + angle / 2;
+            end   = Math.PI - angle / 2;
+            ctx.arc(pos2D.x, pos2D.y, self.hudRadius / camera.z, start, end);
+            ctx.stroke();
+            
+            //Progress
+            ctx.strokeStyle = '#5092fc';
+            ctx.beginPath();
+            angle = (Math.PI) - (self.progress * Math.PI);
+            start = Math.PI + angle / 2;
+            end   = 2 * Math.PI - angle / 2;
+            ctx.arc(pos2D.x, pos2D.y, self.hudRadius / camera.z, start, end);
+            ctx.stroke();
+            
+
+        });
+
+    }
+
+    init () {
+        let obj = objects['furnace'].clone();
+        obj.rotation.x = Math.PI/2;
+        obj.scale.set(1.5/0.7, 1.5/0.7, 1.5/0.7);
+        obj.position.set(this.x, this.y, 0);
+        obj.receiveShadow = true;
+
+        this.obj = obj;
+        return obj;
+    }
+
+    hud (camera) {
+        this.events.emit('hud', camera);
+    }
+
+    static fromScrape (scrape) {
+        return new Furnace(scrape.id, scrape.x, scrape.y, scrape.health, scrape.progress);
+    }
+    
+}
+entities[Furnace.type] = Furnace;
+
 //DYNAMIC ENTITY BASE CLASS
 class Dynamic extends Entity {
 
@@ -361,7 +434,7 @@ class Dynamic extends Entity {
         return 'dynamic';
     }
 
-    constructor (id, x, y, angle) {
+    constructor (id, x, y, angle, defaultHud) {
         super (id, x, y);
 
         this.a = angle || 0;
@@ -412,22 +485,24 @@ class Dynamic extends Entity {
         });
 
         //Draw health bar
-        this.events.on('hud', function (camera) {
-            if (self.health < 1) {
-                let pos2D = camera.positionToCamera(self.x, self.y, 0);
-                let ctx = camera.hudMap;
+        if (defaultHud) {
+            this.events.on('hud', function (camera) {
+                if (self.health < 1) {
+                    let pos2D = camera.positionToCamera(self.x, self.y, 0);
+                    let ctx = camera.hudMap;
 
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth   = 100/camera.z;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 100 / camera.z;
 
-                ctx.beginPath();
-                let angle = (Math.PI*2)/3 - (self.health * Math.PI * 2/3);
-                let start = Math.PI/6 + angle/2;
-                let end   = (Math.PI * 5)/6 - angle/2;
-                ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
-                ctx.stroke();
-            }
-        });
+                    ctx.beginPath();
+                    let angle = (2*Math.PI) - (self.health * 2*Math.PI);
+                    let start = 1.5*Math.PI + angle/2;
+                    let end   = 1.5*Math.PI - angle/2;
+                    ctx.arc(pos2D.x, pos2D.y, self.hudRadius / camera.z, start, end);
+                    ctx.stroke();
+                }
+            });
+        }
     }
 
     hud (camera) {
@@ -486,7 +561,7 @@ class Barrel extends Dynamic {
     }
 
     constructor (id, x, y) {
-        super(id, x, y);
+        super(id, x, y, 0, true);
 
         let self = this;
     }
@@ -516,7 +591,7 @@ class Wolf extends Dynamic {
     }
 
     constructor (id, x, y, a) {
-        super (id, x, y, a);
+        super (id, x, y, a, true);
     }
 
     init () {
@@ -545,7 +620,8 @@ class Centurion extends Dynamic {
     }
 
     constructor (id, x, y, a) {
-        super (id, x, y, a);
+        super (id, x, y, a, true);
+        this.hudRadius = 720;
     }
 
     init () {
@@ -581,7 +657,6 @@ class Player extends Dynamic {
         this.nick = nick;
 
         this.color = colors[Math.round(Math.random() * (colors.length-1))];
-        console.log(this.color);
 
         this.hudRadius = 560;
 
@@ -601,7 +676,6 @@ class Player extends Dynamic {
             let r = self.color.r + Math.floor((0xff - self.color.r)*self.health);
             let g = self.color.g + Math.floor((0xff - self.color.g)*self.health);
             let b = self.color.b + Math.floor((0xff - self.color.b)*self.health);
-            console.log(r, g, b);
             light.color = new THREE.Color(r/255, g/255, b/255);
         });
 
@@ -618,6 +692,15 @@ class Player extends Dynamic {
             ctx.fillText(self.nick, x, y);
 
             ctx.lineWidth   = 100/camera.z;
+
+            //Health
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            let angle = (Math.PI * 2) / 3 - (self.health * Math.PI * 2 / 3);
+            let start = Math.PI / 6 + angle / 2;
+            let end = (Math.PI * 5) / 6 - angle / 2;
+            ctx.arc(pos2D.x, pos2D.y, self.hudRadius/camera.z, start, end);
+            ctx.stroke();
 
             //Ammo
             ctx.strokeStyle = '#5092fc';
@@ -1156,7 +1239,7 @@ function lobby (playerRanks) {
 
         let loading = document.createElement('h1');
         loading.className = "text-white text-center";
-        let loadingText = document.createTextNode('l o a d i n g');
+        let loadingText = document.createTextNode('m m . i o');
         loading.appendChild(loadingText);
         container.appendChild(loading);
 
@@ -1199,7 +1282,6 @@ function update (scrapes) {
 function setPlayer (ply) {
     'use strict'; //Strict mode
 
-    //TODO Send only player id
     plyId = ply.id;
 }
 
@@ -1292,7 +1374,6 @@ function init () {
     //MOUSE BUTTONS
     document.addEventListener('click', function (event) {
         let btn = 'Mouse' + event.button;
-        console.log(btn);
         let index = btns.indexOf(btn);
         if (index === -1) {
             btns.push(btn);
@@ -1360,6 +1441,11 @@ assetQueue.push({
     type: 'obj',
     location: 'models/centurion.json',
     name: 'centurion'
+});
+assetQueue.push({
+    type: 'obj',
+    location: 'models/furnace.json',
+    name: 'furnace'
 });
 
 loadAssets();
