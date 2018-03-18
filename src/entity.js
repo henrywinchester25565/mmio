@@ -772,8 +772,8 @@ class Furnace extends Entity {
         this.follow       = new $BOUNDS.bounds.circle(this.x, this.y, 20); //Start creating children
         this.makeChildren = false;
 
-        this.health    = 12;
-        this.maxHealth = 12;
+        this.health    = 7;
+        this.maxHealth = 7;
         this.xp        = 200;
         this.hitxp     = 40;
 
@@ -1129,7 +1129,7 @@ class Mage extends Player {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 //Direction from centre to target vector
                 let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: self.x, y: self.y}), target));
-                let force = $VECTOR.pro(10000, dir);
+                let force = $VECTOR.pro(17000, dir);
                 let pos = $VECTOR.add($VECTOR.pro(1.5 * self.radius, dir), {x: self.x, y: self.y}); //Out of player bounds
 
                 let projectile = new Projectile(pos.x, pos.y, force);
