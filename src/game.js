@@ -72,14 +72,18 @@ class Game {
             //Enemies...
             for (let i = 0; i < self.enemies.length; i++) {
                 let enemy = self.enemies[i];
-                if (enemy.alive) {
-                    enemyBounds.push({ent: enemy, players: [], bounds: enemy.follow}); //So that follow bounds are used
-                }
-                //Cleanup dead enemies from world gen
-                else {
-                    let index = self.enemies.indexOf(enemy);
-                    if (index > -1) {
-                        self.enemies.splice(index, 1);
+                //If enemy has follow bounds (static enemies don't)
+                if (enemy.follow) {
+                    //If enemy is alive in world
+                    if (enemy.alive) {
+                        enemyBounds.push({ent: enemy, players: [], bounds: enemy.follow}); //So that follow bounds are used
+                    }
+                    //Cleanup dead enemies from world gen
+                    else {
+                        let index = self.enemies.indexOf(enemy);
+                        if (index > -1) {
+                            self.enemies.splice(index, 1);
+                        }
                     }
                 }
             }
@@ -101,6 +105,19 @@ class Game {
             //Trigger action event on enemies
             for (let i = 0; i < enemyBounds.length; i++) {
                 enemyBounds[i].ent.action(enemyBounds[i].players); //Pass collided players as parameter
+            }
+
+            //Add new weapons from all players
+            for (let i = 0; i < self.enemies.length; i++) {
+                let enemy = self.enemies[i];
+                //Add new weapons
+                while (enemy.weapons.length > 0) {
+                    let weapon = enemy.weapons.pop();
+                    self.world.addChild(weapon);
+                    if (weapon.ai) {
+                        self.enemies.push(weapon);
+                    }
+                }
             }
 
             //Check how many players are alive
@@ -296,7 +313,7 @@ class Game {
                                     ply.entity.reload();
                                     break;
                                 case 'KeyF': //Secondary
-                                    ply.entity.attackPrimary(target);
+                                    ply.entity.attackSecondary(target);
                                     //Add latest weapons to world
                                     if (ply.entity.weapons.length > 0) {
                                         while (ply.entity.weapons.length > 0) {
