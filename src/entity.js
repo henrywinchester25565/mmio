@@ -431,9 +431,12 @@ class Projectile extends Physics {
     constructor (x, y, force, r, mass, damage, friendly, lifespan) {
         super (x, y);
         //PHYSICS
-        this.radius = r || 0.15;
+        this.radius = r || 0.3;
         this.mass = mass || 10;
         this.forces.push(force);
+
+        //Doesn't bounce things
+        this.collides = false;
 
         //Area for drag
         this.area = this.radius * this.radius; //Assume in cube
@@ -443,7 +446,6 @@ class Projectile extends Physics {
         this.friendly = true;
 
         this.lifespan = lifespan || 2000; //ms
-        this.colCount = 0; //Number of collisions before death
 
         this.source = undefined; //Placed here for doc reasons - know there is a property called source
 
@@ -456,11 +458,20 @@ class Projectile extends Physics {
             }
         });
 
-        this.onCollide(function () {
-            if (self.colCount <= 0) {
+        //Do angle
+        this.onUpdate(function () {
+            if ($VECTOR.mag(self.velocity) > 2) {
+                let dir = $VECTOR.nrm(self.velocity);
+                dir.x = dir.x * -1;
+                let angle = $VECTOR.ang(dir);
+                self.a = angle;
+            }
+        });
+
+        this.onCollide(function (entity) {
+            if (!entity.friendly) { //Collides with anything but players
                 self.kill();
             }
-            self.colCount--;
         });
 
         //BOUNDS
@@ -473,6 +484,7 @@ class Projectile extends Physics {
         return {
             x: this.x,
             y: this.y,
+            a: this.a,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -1117,7 +1129,7 @@ class Mage extends Player {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 //Direction from centre to target vector
                 let dir = $VECTOR.nrm($VECTOR.add($VECTOR.pro(-1, {x: self.x, y: self.y}), target));
-                let force = $VECTOR.pro(35000, dir);
+                let force = $VECTOR.pro(10000, dir);
                 let pos = $VECTOR.add($VECTOR.pro(1.5 * self.radius, dir), {x: self.x, y: self.y}); //Out of player bounds
 
                 let projectile = new Projectile(pos.x, pos.y, force);
