@@ -445,7 +445,7 @@ class Projectile extends Physics {
         this.damage = damage || 1;
         this.friendly = true;
 
-        this.lifespan = lifespan || 2000; //ms
+        this.lifespan = lifespan || 3000; //ms
 
         this.source = undefined; //Placed here for doc reasons - know there is a property called source
 
@@ -485,6 +485,60 @@ class Projectile extends Physics {
             x: this.x,
             y: this.y,
             a: this.a,
+            id: this.id,
+            type: this.type,
+            alive: this.alive
+        };
+    }
+
+}
+
+//AREA OF EFFECT ATTACK USED BY MAGE
+class AreaOfEffect extends Entity {
+
+    constructor (x, y) {
+        super(x, y);
+
+        //FUNCTIONALITY
+        this.source = undefined;
+        
+        this.damage = 1;
+        
+        this.friendly = true;
+        this.lifetime = 1500; //ms
+        
+        this.increaseRate = (1.5 - 0.2)/this.lifetime;
+        this.maxRadius    = 1.5;
+        
+        let self = this;
+        this.onUpdate(function (dt) {
+            //Increase radius
+            let radius    = self.radius + dt*self.increaseRate;
+            self.radius   = radius > self.maxRadius ? self.maxRadius : radius;
+            self.bounds.r = self.radius;
+            self.changed  = true;
+
+            //Lifetime
+            if (self.lifetime > 0) {
+                self.lifetime = self.lifetime - dt;
+            }
+            else {
+                self.kill();
+            }
+        });
+
+        //BOUNDS
+        this.radius = 0.2;
+        this.bounds = new $BOUNDS.bounds.circle(this.x, this.y, this.radius);
+
+        this.type = 'aoe';
+    }
+
+    scrape () {
+        return {
+            x: this.x,
+            y: this.y,
+            r: this.radius,
             id: this.id,
             type: this.type,
             alive: this.alive
@@ -539,12 +593,16 @@ class Enemy extends Physics {
 
         this.state = $AI_STATES.still; //Enum indicating how the enemy should behave
         this.nearest = undefined; //Nearest player
+        
+        //So doesn't take constant damage
+        this.dmgInterval = 300; //300ms
+        this.lastDmg     = 300;
 
         let self = this;
         //Damage
         this.onCollide(function (entity) {
             //Damage from a player weapon
-            if (entity.friendly && entity.damage) {
+            if (self.lastDmg >= self.dmgInterval && entity.friendly && entity.damage) {
                 self.health = self.health - entity.damage;
                 if (self.health <= 0) {
                     //Give player charge equal to xp worth
@@ -559,6 +617,14 @@ class Enemy extends Physics {
                         entity.source.gainXP(self.hitxp);
                     }
                 }
+                self.lastDmg = 0;
+            }
+        });
+        
+        //Increase last damage
+        this.onUpdate(function (dt) {
+            if (self.lastDmg < self.dmgInterval) {
+                self.lastDmg = self.lastDmg + dt;
             }
         });
 
@@ -1134,13 +1200,7 @@ class Mage extends Player {
 
                 let projectile = new Projectile(pos.x, pos.y, force);
                 projectile.source = self;
-                //When projectile kills itself
-                projectile.onKill(function () {
-                    let index = self.weapons.indexOf(projectile);
-                    if (index > -1) {
-                        self.weapons.splice(index, 1);
-                    }
-                });
+
                 //Add to active weapons
                 self.weapons.push(projectile);
 
@@ -1154,9 +1214,19 @@ class Mage extends Player {
             if (self.ammo > 0 && self.lastRound >= self.fireRate) {
                 if (self.health < self.maxHealth && self.ammo >= self.ammoToHealth) {
                     let health = self.health + 3;
-                    self.health = health > self.maxHealth ? self.maxHealth : health;
+                    self.health = health >= self.maxHealth ? self.maxHealth : health;
                     self.ammo = self.ammo - self.ammoToHealth
                 }
+            }
+        });
+
+        this.onAttackSpecial(function () {
+            if (self.charge >= self.maxCharge) {
+                let aoe = new AreaOfEffect(self.x, self.y);
+                aoe.source = self;
+
+                self.weapons.push(aoe);
+                self.charge = 0;
             }
         });
 
