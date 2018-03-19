@@ -342,7 +342,7 @@ class Game {
                                         }
                                     }
                                     break;
-                                case 'Space': //Special
+                                case 'Space': //Special attack
                                     ply.entity.attackSpecial(target);
                                     //Add latest weapons to world
                                     if (ply.entity.weapons.length > 0) {
