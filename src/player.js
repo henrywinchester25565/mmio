@@ -28,8 +28,9 @@ class Player {
 
         this.events = new $EVENTS.handler();
 
-        this.xp    = 1100;
-        this.level = 1;
+        this.xp       = 1100;
+        this.level    = 1;
+        this.oldLevel = 1;
 
         //INPUT
         this.keys = [];
@@ -87,10 +88,11 @@ class Player {
         //When entity exits game
         let self = this;
         this.entity.onExit(function () {
-            self.xp = self.xp + self.entity.xp;
-            self.level = Math.floor(self.xp/200);
-            self.entity = undefined; //Lose entity connection
-            self.active = false;
+            self.xp       = self.xp + self.entity.xp;
+            self.oldLevel = self.level;
+            self.level    = Math.floor(self.xp/200);
+            self.entity   = undefined; //Lose entity connection
+            self.active   = false;
             self.exit();
         });
 
