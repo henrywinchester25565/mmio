@@ -85,7 +85,7 @@ const $ADD_TO_LOBBY = function (ply) {
     //PLAYER RANK
     //Remove from old rank
     let oldRank = ply.oldLevel;
-    if (oldRank !== ply.level && oldRank > 0) {
+    if (oldRank !== ply.level && oldRank > 0 && $RANKING.hasOwnProperty(oldRank)) {
         //Delete from old rank
         let index = $RANKING[oldRank].indexOf(ply);
         if (index > -1) {
