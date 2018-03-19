@@ -342,6 +342,15 @@ class Game {
                                         }
                                     }
                                     break;
+                                case 'Space': //Special
+                                    ply.entity.attackSpecial(target);
+                                    //Add latest weapons to world
+                                    if (ply.entity.weapons.length > 0) {
+                                        while (ply.entity.weapons.length > 0) {
+                                            self.world.addChild(ply.entity.weapons.pop());
+                                        }
+                                    }
+                                    break;
                             }
                         }
                         if (dir.x !== 0 || dir.y !== 0) {
