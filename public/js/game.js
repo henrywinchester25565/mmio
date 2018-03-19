@@ -366,7 +366,7 @@ class Furnace extends Entity {
         this.progress = progress || 1;
 
         this.hudRadius = 1500;
-        
+
         let self = this;
         this.events.on('update', function (scrape) {
             self.health = scrape.health;
@@ -381,7 +381,7 @@ class Furnace extends Entity {
             ctx.lineWidth   = 100/camera.z;
 
             let angle, start, end;
-            
+
             //Health
             ctx.strokeStyle = '#ffffff';
             ctx.beginPath();
@@ -390,7 +390,7 @@ class Furnace extends Entity {
             end   = Math.PI - angle / 2;
             ctx.arc(pos2D.x, pos2D.y, self.hudRadius / camera.z, start, end);
             ctx.stroke();
-            
+
             //Progress
             ctx.strokeStyle = '#5092fc';
             ctx.beginPath();
@@ -399,7 +399,7 @@ class Furnace extends Entity {
             end   = 2 * Math.PI - angle / 2;
             ctx.arc(pos2D.x, pos2D.y, self.hudRadius / camera.z, start, end);
             ctx.stroke();
-            
+
 
         });
 
@@ -423,9 +423,51 @@ class Furnace extends Entity {
     static fromScrape (scrape) {
         return new Furnace(scrape.id, scrape.x, scrape.y, scrape.health, scrape.progress);
     }
-    
+
 }
 entities[Furnace.type] = Furnace;
+
+//AOE weapon
+class AreaOfEffect extends Entity {
+
+    static get type () {
+        return 'aoe';
+    }
+
+    constructor (id, x, y, r) {
+        super(id, x, y);
+
+        this.radius = r || 0.2;
+
+        let self = this;
+        this.events.on('update', function (scrape) {
+            self.radius = scrape.r || self.radius;
+            self.obj.scale.set(self.radius, self.radius, 1);
+        });
+    }
+
+    init () {
+        let geo = new THREE.CylinderGeometry(2, 2, 0.2, 16);
+        let mat = new THREE.MeshBasicMaterial({color: 0x46ce37});
+        let obj = new THREE.Mesh(geo, mat);
+        obj.rotation.x = Math.PI/2;
+        obj.position.set(0, 0, 0.1);
+
+        let group = new THREE.Group();
+        group.add(obj);
+        group.scale.set(this.radius, this.radius, 1);
+        group.position.set(this.x, this.y, 0);
+
+        this.obj = group;
+        return group;
+    }
+
+    static fromScrape (scrape) {
+        return new AreaOfEffect(scrape.id, scrape.x, scrape.y, scrape.r)
+    }
+
+}
+entities[AreaOfEffect.type] = AreaOfEffect;
 
 //DYNAMIC ENTITY BASE CLASS
 class Dynamic extends Entity {
@@ -610,7 +652,7 @@ class Wolf extends Dynamic {
 entities[Wolf.type] = Wolf;
 
 class Centurion extends Dynamic {
-    
+
     static get type () {
         return 'centurion';
     }
@@ -635,7 +677,7 @@ class Centurion extends Dynamic {
     static fromScrape (scrape) {
         return new Centurion(scrape.id, scrape.x, scrape.y, scrape.a);
     }
-    
+
 }
 entities[Centurion.type] = Centurion;
 
@@ -1010,7 +1052,7 @@ class World {
     //Animation controls (doesn't affect updates from server)
     start () {
         this.running = true;
-        
+
         let self = this;
         let animate = function () {
             if (self.running) {
@@ -1079,16 +1121,18 @@ class World {
             //Update existing entities
             if (this.children.hasOwnProperty(scrape.id)) {
                 let child = this.children[scrape.id];
-                child.update(scrape);
-                if (!scrape.alive) {
+                if (scrape.alive) {
+                    child.update(scrape);
+                }
+                else {
                     child.kill();
                 }
             }
 
             //Add new entities
-            else {
+            else if (scrape.alive) {
                 let entity = Entity.entityFromScrape(scrape);
-                if (entity !== null) {
+                if (entity !== null ) {
                     this.addChild(entity);
                 }
             }
