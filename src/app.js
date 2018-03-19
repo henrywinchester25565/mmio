@@ -84,8 +84,8 @@ const $USERNAMES = [];
 const $ADD_TO_LOBBY = function (ply) {
     //PLAYER RANK
     //Remove from old rank
-    let oldRank = ply.level - 1;
-    if (oldRank > 0) {
+    let oldRank = ply.oldLevel;
+    if (oldRank !== ply.level && oldRank > 0) {
         //Delete from old rank
         let index = $RANKING[oldRank].indexOf(ply);
         if (index > -1) {
