@@ -176,7 +176,7 @@ class Light extends Entity {
 
 //PHYSICS
 //Using the metric system, 1u = 1m (roughly)
-const $FRICTION  = 0.6; //Very high coefficient of friction
+const $FRICTION  = 1.2; //Very high coefficient of friction
 const $GRAVITY   = 9.81; //Acceleration due to gravity ms^-2
 const $AIR       = 1.225; //Mass density of air kgm^3
 //Inherits point bounds
@@ -208,7 +208,6 @@ class Physics extends Entity {
         let self = this; //Reference to entity
         //Set changed
         //Physics calcs when updated
-        //TODO remove function from constructor and use call function on below instead
         this.onUpdate(function (dt) {
 
             //dt in ms, so convert to s
@@ -572,7 +571,7 @@ class Enemy extends Physics {
 
         //PHYSICS
         this.mass   = mass  || this.mass;
-        this.force  = force || 800; //Magnitude of driving force
+        this.force  = force || 1900; //Magnitude of driving force
 
         //DEFAULTS
         this.maxHealth = health || 3;
@@ -704,7 +703,7 @@ class Enemy extends Physics {
 class Wolf extends Enemy {
 
     constructor (x, y) {
-        super(x, y, 65, 1000, 3);
+        super(x, y, 65, 1900, 3);
         //PHYSICS
         this.radius = 0.5;
 
@@ -737,7 +736,7 @@ class Wolf extends Enemy {
 class Centurion extends Enemy {
 
     constructor (x, y) {
-        super(x, y, 100, 1200, 4, 20);
+        super(x, y, 100, 1800, 4, 20);
         this.minHealth = 1;
         this.xp        = 30;
         this.hitxp     = 10;
