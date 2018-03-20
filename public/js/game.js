@@ -724,7 +724,7 @@ class Player extends Dynamic {
 
             //Nickname
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'Normal Bold '+320/camera.z+'px Garamond';
+            ctx.font = 'Normal Bold '+320/camera.z+'px Arial Black';
             let x = pos2D.x;
             let y = pos2D.y - (800/camera.z);
             ctx.fillText(self.nick, x, y);
@@ -882,9 +882,9 @@ class Camera {
         this.width  = window.innerWidth;
         this.height = window.innerHeight;
 
-        this.renderer = new THREE.WebGLRenderer({antialias: true});
+        this.renderer                   = new THREE.WebGLRenderer({antialias: true});
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 
         this.renderer.setSize(this.width, this.height);
         this.html = this.renderer.domElement;
@@ -934,7 +934,7 @@ class Camera {
         let pos = new THREE.Vector3(x, y, z);
         let vector = pos.project(this.camera);
 
-        vector.x = (vector.x + 1) / 2 * this.width;
+        vector.x =  (vector.x + 1) / 2 * this.width;
         vector.y = -(vector.y - 1) / 2 * this.height;
         return vector;
     }
@@ -954,6 +954,15 @@ class Camera {
     render () {
         //3D
         this.renderer.render(this.scene, this.camera);
+    }
+
+    dead () {
+        this.hudMap.globalAlpha = 1;
+        this.hudMap.fillStyle   = "black";
+        this.hudMap.fillRect(0, 0, this.width, this.height);
+        this.hudMap.fillStyle   = "white";
+        this.hudMap.font        = 'Normal Bold 200px Arial Black';
+        this.hudMap.fillText('y o u   d i e d', this.width/2, this.height/2);
     }
 
 }
@@ -1234,9 +1243,8 @@ function username (online) {
     let controls = document.createElement('h4');
     controls.className =  "text-center text-gray";
     controls.innerHTML = 'WASD to move, MOUSE to aim and LEFT CLICK for main attack' +
-        '<br>R to RELOAD, F for SECONDARY and SPACE for charged SPECIAL' +
-        '<br>E to USE chests and I to open the INVENTORY' +
-        '<br>WHITE = HEALTH, BLUE = AMMO, GREEN = CHARGE' +
+        '<br>R to RELOAD, F for HEALING and SPACE for AEO SPECIAL' +
+        '<br>WHITE for HEALTH, BLUE for MMO, GREEN for CHARGE' +
         '<br>once all the ENEMIES are dead, head to the EXIT' +
         '<br><br> press F11 (FULLSCREEN) for full experience';
     container.appendChild(howTo);
@@ -1368,7 +1376,11 @@ function init () {
     //OPEN SOCKET
     socket = io();
     socket.on('dead', function () {
-        location.reload(); //RESTART
+        world.camera.dead();
+        world.stop();
+        setTimeout(function () {
+            location.reload(); //RESTART
+        }, 3000);
     });
 
     //EVENTS
