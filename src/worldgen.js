@@ -1,3 +1,10 @@
+//DESC: FOR RANDOMLY GENERATING WORLDS
+
+//LOADED
+console.log('Loaded: worldgen.js');
+
+//The following code should be refined and restructured, but works adequately for now.
+
 //REQUIREMENTS
 const $VECTOR = require('./general.js').vector;
 const $BOUNDS = require('./bounds.js');
