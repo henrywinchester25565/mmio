@@ -15,6 +15,8 @@ const $CHUNK_SIZE = 24;
 //Extends box because bounding already supplies testing for bounds
 /*Entities may exist in more than one chunk at a time (like a large wall), it's the role of the higher levels to handle this
 * since the purpose of the world and chunks is organisation*/
+//AFTER DEVELOPMENT, DISCOVERED NOT NEEDED
+//Could be deleted, or left in incase of optimisation requirements.
 class Chunk {
 
     //chunk x and y => x, y
