@@ -1,4 +1,8 @@
-//GAME.JS FOR CLIENT SIDE
+//DESC: GAME.JS FOR CLIENT SIDE
+
+//LOADED
+console.log('loaded: game.js');
+
 //INFORMATION
 /*
     ASSETS:
@@ -682,7 +686,6 @@ class Centurion extends Dynamic {
 entities[Centurion.type] = Centurion;
 
 //PLAYER TOKEN CLASS
-//0xef56b4
 let colors = [{r: 0x50, g: 0x92, b: 0xfc}, {r: 0x46, g: 0xce, b: 0x37}];
 class Player extends Dynamic {
 
@@ -829,7 +832,6 @@ class Floor {
 
         //Material
         let material = new THREE.MeshPhongMaterial({specular: 0x222222});
-        //material.receiveShadow = true;
 
         let base = textures['floor_base'];
         let normal = textures['floor_normal'];
@@ -887,7 +889,7 @@ class Camera {
         this.renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 
         this.renderer.setSize(this.width, this.height);
-        this.html = this.renderer.domElement;
+        this.html                = this.renderer.domElement;
         this.html.style.position = 'relative';
         this.html.style.top      = '0';
         this.html.style.left     = '0';
@@ -899,6 +901,7 @@ class Camera {
         //HEADS UP DISPLAY (HUD)
         //Renders bitmap images onto html canvas
         this.hudCanvas                = document.createElement('canvas');
+        //Position above three.js canvas
         this.hudCanvas.style.position = 'absolute';
         this.hudCanvas.style.top      = '0';
         this.hudCanvas.style.left     = '0';
@@ -998,7 +1001,6 @@ class World {
 
         let self = this;
         window.addEventListener('mousemove', function (event) {
-            //From https://threejs.org/docs/#api/core/Raycaster
             self.mouseScreen.x = ( event.clientX / self.camera.width ) * 2 - 1;
             self.mouseScreen.y = - ( event.clientY / self.camera.height ) * 2 + 1;
         }, false );
@@ -1383,19 +1385,6 @@ function init () {
         }, 3000);
     });
 
-    //EVENTS
-    /*
-    
-        FROM SERVER
-        world_init: receives initial world scrape
-        update: receives snapshot from server
-        ply: receives the players id
-    
-        TO SERVER
-        input: sends the client input
-    
-    */
-
     //GET USERNAME
     socket.on('username', username);
 
@@ -1456,6 +1445,10 @@ function init () {
 manager.onLoad = init;
 
 //ASSETS
+//JSON obj determines the type (map pushed into),
+//File location and key of assets
+//TODO the asset queue could be converted into a json file
+//And removed from here
 assetQueue.push({
     type: 'tex',
     location: 'textures/floor_diffuse.png',
