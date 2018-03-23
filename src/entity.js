@@ -1300,6 +1300,7 @@ class Gateway extends Entity {
 }
 
 //CHEST
+//TODO inventory system and equipment has yet to be coded
 //Pretty much a wall with an inventory
 class Chest extends Entity {
 
