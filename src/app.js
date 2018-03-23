@@ -5,18 +5,14 @@ console.log('');
 
 //NOTES
 //Files should start with an all caps DESC: comment explaining the files purpose.
-//CAPS - Used for comments being used as headers
-//LOADED - Every file loaded should log its execution
-//REQUIREMENTS - Proceeds an constants using the 'require' function.
-//$CONSTANT - A $ preceding all caps (separated by _) for constants.
-//_function - In some cases constant functions may be written like this, but only if they are intended to be
-//          - functions for an object, and can't be used 'stand-alone'.
+//CAPS         - Used for comments being used as headers
+//LOADED       - Every file loaded should log its execution
+//REQUIREMENTS - Proceeds any constants using the 'require' function.
+//$CONSTANT    - A $ preceding all caps (separated by _) for constants.
 //Parameters use lowercase and underscores.
 //
-//Try and keep exported function names in objects to three letters (e.g. rmv, add).
+//Try and keep exported function names in objects to three letters (e.g. rmv, add). [NOT REQUIRED]
 //Unit - One unit is ~ treated like a metre
-//
-//Server-Side code is written to be easily converted into a working client-side equivalent.
 //
 //I declare functions as constant variables. They don't get hoisted by I prefer to treat them entirely like objects,
 //and it helps when thinking about structure.
