@@ -908,7 +908,6 @@ class Furnace extends Entity {
                 self.lastChild = self.lastChild + dt;
             }
             else if (self.children.length < self.maxChildren && self.makeChildren) {
-                //Baby making time
                 //Random angle
                 let angle = Math.random() * 2*Math.PI;
                 let force = {x: 12000 * Math.cos(angle), y: 12000 * Math.sin(angle)};
