@@ -1,4 +1,3 @@
-//Server-Side ONLY
 //DESC: THE GAME SCRIPT
 'use strict';
 
