@@ -41,7 +41,6 @@ const $VECTOR_MAGNITUDE = function (a) {
     return Math.sqrt(a.x * a.x + a.y * a.y); //Pythagoras
 };
 
-// -- Test in degrees, work in radians --
 //Angle between two vectors
 const $VECTOR_ANGLE_LOCAL = function (a, b) {
     let div = $VECTOR_MAGNITUDE(a) * $VECTOR_MAGNITUDE(b);
